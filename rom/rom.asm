@@ -44,3 +44,4 @@ tmpaddr = &70                           ; 2 bytes for (tmpaddr),Y type calls
         ENDIF
 .romEnd
         SAVE "brail", romStart, romEnd
+        PUTFILE "boot", "!BOOT", 1000

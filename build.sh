@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DISK=$(pwd)/rom.ssd
+TMPDISK=${DISK}.1
 
 # Write version to be the build date
 echo " EQUS \"0.01 ($(date "+%d %b %Y"))\"" >version.asm
@@ -8,7 +9,7 @@ echo " EQUS \"0.01 ($(date "+%d %b %Y"))\"" >version.asm
 # Copyright year
 echo " EQUS \"$(date "+%Y")\"" >copyright.asm
 
-rm -f $DISK
+rm -f $DISK $TMPDISK
 
 # Compile a local rom image, for programming into an actual EEPROM
 # -D FILLBANK=1 tells rom.asm to ensure the image is 16K
@@ -23,4 +24,5 @@ beebasm -w \
   -i rom/rom.asm \
   -D FILLBANK=0 \
   -title BeebRail \
+  -opt 3 \
   -do $DISK
