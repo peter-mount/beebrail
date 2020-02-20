@@ -1,0 +1,7 @@
+*.ssd
+*.temp
+*~
+~
+version.asm
+copyright.asm
+/brail
