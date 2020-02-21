@@ -1,14 +1,12 @@
 package server
 
 import (
-	"github.com/jacobsa/go-serial/serial"
+	"github.com/peter-mount/beebrail/protocol"
 	"github.com/peter-mount/golib/kernel"
-	"io"
-	"log"
 )
 
 type Server struct {
-	port io.ReadWriteCloser
+	protocol *protocol.Protocol
 }
 
 func (s *Server) Name() string {
@@ -16,27 +14,16 @@ func (s *Server) Name() string {
 }
 
 func (s *Server) Init(k *kernel.Kernel) error {
+	service, err := k.AddService(&protocol.Protocol{})
+	if err != nil {
+		return err
+	}
+	s.protocol = (service).(*protocol.Protocol)
+
 	return nil
 }
 
 func (s *Server) Start() error {
-	log.Println("Starting server")
-	options := serial.OpenOptions{
-		PortName:              "/dev/ttyUSB0",
-		BaudRate:              9600,
-		DataBits:              8,
-		StopBits:              1,
-		MinimumReadSize:       0,
-		InterCharacterTimeout: 100,
-	}
-
-	port, err := serial.Open(options)
-	if err != nil {
-		return err
-	}
-	s.port = port
-
-	s.port.Write([]byte("Hello\r\n"))
 
 	return nil
 }

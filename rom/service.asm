@@ -42,6 +42,9 @@
         ; A 0 terminates the table.
         ; For performance, put the most used calls first in the table!
 .serviceLookup
+        EQUB &04:EQUW oscliHandler          ; 04 unrecognised OSCLI
         ;EQUB &08:EQUW oswordHandler         ; 08 Unrecognised OSWORD
         ;EQUB &27:EQUW serviceReset          ; 27 Reset
         EQUB 0                              ; end of table
+
+        INCLUDE "rom/oscli.asm"
