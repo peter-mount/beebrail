@@ -27,7 +27,7 @@ tmpaddr = &70                           ; 2 bytes for (tmpaddr),Y type calls
         INCLUDE "version.asm"           ; Version date is the build date
 .copyright
         EQUS 0, "(C)"                   ; Must start with 0 to be valid
-        INCLUDE "copyright.asm"
+        INCLUDE "copyright.asm"         ; Pulls in the build year
         EQUS " Area51.dev", 0
 
 ; Core modules

@@ -1,7 +1,19 @@
 #!/bin/bash
 
-DISK=$(pwd)/rom.ssd
-TMPDISK=${DISK}.1
+DEST=$(pwd)/dest
+DISK=${DEST}/rom.ssd
+
+rm -rf ${DEST}
+mkdir -p ${DEST}
+
+# The server
+CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    GOARM="" \
+    go build -o dest/beebserver ./bin
+
+# Now the BBC rom
 
 # Write version to be the build date
 echo " EQUS \"0.01 ($(date "+%d %b %Y"))\"" >version.asm
