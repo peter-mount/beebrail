@@ -40,7 +40,9 @@
     JMP (oscliTable,X)
 
 .oscliTable
-    EQUS "CRS ", 0: EQUW crsSearch  ; Search for CRS
-    EQUB 0                          ; Table terminator
+    EQUS "CRS ",0       : EQUW crsSearch    ; Display CRS
+    EQUS "SEARCH ",0    : EQUW search       ; Search for name
+    EQUB 0                                  ; Table terminator
 
     INCLUDE "rom/crs.asm"
+    INCLUDE "rom/search.asm"

@@ -45,11 +45,42 @@ cmdCRS = 'C'
     PHY                             ; Preserve X & Y
     PHX
 .serRead0
-    LDA #&91
-    LDX #1
+    LDA #&91                        ; Read character from buffer
+    LDX #1                          ;
     JSR osbyte
-    BCS serRead0                    ; No data read
+    BCS serRead0                    ; No data read so loop
     TYA                             ; Result in Y
     PLX                             ; Restore X & Y then return
     PLY
     RTS
+
+.enableResult
+    PHA:PHX:PHY
+
+    LDA #&02                        ; Use keyboard for input but listen to serial port
+    LDX #2
+    LDY #0
+    JSR osbyte
+
+    LDA #&B5                        ; RS423 input taken as raw data, default but enforce it
+    LDX #1
+    LDY #0
+    JSR osbyte
+
+    LDA #&CC                        ; lets serial data enter the input buffer
+    LDX #0
+    LDY #0
+    JSR osbyte
+    PLY:PLX:PLA
+    RTS
+
+; For simple responses which are plain text but in BBC format just read from RS423 until we get a 0
+.simpleResult
+    JSR serRead
+    CMP #0
+    BEQ simpleResultEnd
+    JSR osasci
+    bra simpleResult
+.simpleResultEnd
+    LDA #13
+    JMP osasci

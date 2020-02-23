@@ -32,9 +32,7 @@ tmpaddr = &70                           ; 2 bytes for (tmpaddr),Y type calls
 
 ; Core modules
         INCLUDE "rom/service.asm"
-        INCLUDE "protocol/protocol.asm"
-;        INCLUDE "rom/osword.asm"
-;        INCLUDE "lib/writeString.asm"
+        INCLUDE "rom/protocol.asm"
 
 ; End of the rom.
 
