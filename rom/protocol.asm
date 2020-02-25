@@ -10,18 +10,44 @@ sendPos = &82
 cmdNOP = 0
 cmdCRS = 'C'
 
-; Starts a command
-; Entry:
-;   A   command code
-; Exit:
-;   X Y preserved
-.startCommand
+; internal, resets the command buffer pointer
+.resetCommandBuffer
     PHA                         ; Save A & reset buffer
     LDA #<commandBuffer
     STA bufferPos
     LDA #>commandBuffer
     STA bufferPos+1
     PLA
+    RTS
+
+; internal increments sendPos
+.incSendPos
+    CLC                         ; Move sendPos 1 byte
+    LDA #1
+    ADC sendPos
+    STA sendPos
+    LDA #0
+    ADC sendPos+1
+    STA sendPos+1
+    RTS
+
+; internal compares bufferPos and sendPos for equality
+.bufferPosSendPosEqual
+    LDA sendPos                     ; Compare LSB
+    CMP bufferPos
+    BNE bufferPosSendPosEqualExit   ; LSB not equal
+    LDA sendPos+1                   ; Compare MSB
+    CMP bufferPos+1
+.bufferPosSendPosEqualExit
+    RTS
+
+; Starts a command
+; Entry:
+;   A   command code
+; Exit:
+;   X Y preserved
+.startCommand
+    JSR resetCommandBuffer
     JSR appendCommand           ; Append command code
     LDA #0                      ; Append 0 (as this is the status byte)
     JSR appendCommand
@@ -37,7 +63,7 @@ cmdCRS = 'C'
 ;
 .appendCommand
     STA (bufferPos)             ; Store
-.appendCommandBuffer
+.appendCommandBuffer            ; entry point used to skip in startCommand only
     CLC                         ; Move bufferPos 1 byte
     LDA #1
     ADC bufferPos
@@ -69,24 +95,35 @@ cmdCRS = 'C'
     JSR osbyte
     BCS sendCommandLoop         ; Buffer was full
 
-    CLC                         ; Move sendPos 1 byte
-    LDA #1
-    ADC sendPos
+    JSR incSendPos              ; Add 1 to sendPos
+    JSR bufferPosSendPosEqual   ; Check for end of buffer
+    BNE sendCommandLoop
+
+    JSR resetCommandBuffer      ; Now wait for a response
+
+    LDX #4                      ; Header size
+    LDY #0
+    JSR readBuffer              ; read the header
+
+    LDX commandBuffer+2         ; Payload size
+    LDY commandBuffer+3         ; Run into reading the rest of the buffer
+.readBuffer
+    CLC                         ; sendPos = XY + bufferPos
+    TXA
+    ADC bufferPos
     STA sendPos
-    LDA #0
-    ADC sendPos+1
+    TYA
+    ADC bufferPos+1
     STA sendPos+1
 
-    LDA sendPos
-    CMP bufferPos
-    BNE sendCommandLoop         ; LSB not equal
-
-    LDA sendPos+1
-    CMP bufferPos+1
-    BNE sendCommandLoop         ; MSB not equal
-
+.readBufferLoop
+    JSR serRead                 ; Read byte
+    JSR appendCommand           ; Append to buffer
+    JSR bufferPosSendPosEqual   ; loop until all read
+    BNE readBufferLoop
     RTS
 
+; Receive
 ; osbyte buffers
 ; 0 keyboard
 ; 1 RS423 input
@@ -134,13 +171,21 @@ cmdCRS = 'C'
     PLY:PLX:PLA
     RTS
 
-; For simple responses which are plain text but in BBC format just read from RS423 until we get a 0
+; For simple responses which are plain text but in BBC format just
+; Write the received payload direct to the output
 .simpleResult
-    JSR serRead
-    CMP #0
-    BEQ simpleResultEnd
+    CLC
+    LDA #<(commandBuffer+4)         ; Set sendPos to start of the payload
+    STA sendPos
+    LDA #>(commandBuffer+4)
+    STA sendPos+1
+.simpleResultLoop                   ; Loop until sendPos hits bufferPos
+    JSR bufferPosSendPosEqual
+    BEQ simpleResultEnd             ; Exit once done
+    LDA (sendPos)
     JSR osasci
-    bra simpleResult
+    JSR incSendPos
+    BRA simpleResultLoop
 .simpleResultEnd
     LDA #13
     JMP osasci

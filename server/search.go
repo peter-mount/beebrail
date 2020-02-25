@@ -22,7 +22,6 @@ func (s *Server) search(cmd *Packet) *Packet {
 	for _, r := range results {
 		resp.AppendString(fmt.Sprintf("%s %s%c", r.Crs, r.Name, 13))
 	}
-	resp.Append(0)
 
 	//log.Println(strings.ReplaceAll(string(b[:]), "\r", "\r\n"))
 
