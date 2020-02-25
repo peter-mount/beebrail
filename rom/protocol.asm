@@ -10,10 +10,6 @@ sendPos = &82
 cmdNOP = 0
 cmdCRS = 'C'
 
-; Ends a command
-.endCommand
-    LDA #0              ; 0 terminator, fall through to startCommand
-
 ; Starts a command
 ; Entry:
 ;   A   command code

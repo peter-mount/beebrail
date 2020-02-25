@@ -15,6 +15,6 @@
     INY
     BNE crsSearch0
 .crsSearch1
-    JSR endCommand
+    ;JSR endCommand
     ; receive result
     RTS

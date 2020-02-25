@@ -50,53 +50,23 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) processCommand() error {
-	cmd, err := s.in.ReadByte()
+	cmd := &Packet{}
+	err := cmd.Read(s.in)
 	if err != nil {
 		return err
 	}
-	log.Printf("%02x", cmd)
 
-	// Status byte, ignore for command invocation
-	st, err := s.in.ReadByte()
-	if err != nil {
-		return err
-	}
-	log.Printf("%02x", st)
-
-	// Read in packet length
-	b, err := s.in.ReadByte()
-	if err != nil {
-		return err
-	}
-	log.Printf("%02x", b)
-	l := int(b)
-
-	b, err = s.in.ReadByte()
-	if err != nil {
-		return err
-	}
-	log.Printf("%02x", b)
-	l = l | (int(b) << 8)
-
-	var packet []byte
-	// Note we can't do the following as the BBC isn't fast enough!
-	// l, err := s.in.Read(packet)
-	for i := 0; i < l; i++ {
-		b, err = s.in.ReadByte()
-		if err != nil {
-			return err
-		}
-		packet = append(packet, b)
-	}
-
-	log.Printf("%02x Received %04x expected %04x", cmd, len(packet), l)
-
-	switch cmd {
+	var resp *Packet
+	switch cmd.Command {
 	case 'S':
-		s.search(string(packet))
+		resp = s.search(cmd)
 	default:
 		log.Printf("Command %02x unrecognised", cmd)
 	}
 
-	return nil
+	if resp == nil {
+		resp = cmd.EmptyResponse(0)
+	}
+
+	return resp.Write(s.port)
 }
