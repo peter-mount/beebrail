@@ -44,20 +44,59 @@ func (s *Server) PostInit() error {
 func (s *Server) Start() error {
 
 	for true {
-		cmd, err := s.in.ReadString(0)
-		if err == nil && len(cmd) > 0 {
-			param := cmd[1 : len(cmd)-1]
-			log.Println(cmd[0:1], param)
-
-			switch cmd[0] {
-			//case 'C':
-			//	s.crs(s[1..])
-			case 'S':
-				s.search(param)
-			default:
-				log.Println("Command unrecognised")
-			}
-		}
+		_ = s.processCommand()
 	}
+	return nil
+}
+
+func (s *Server) processCommand() error {
+	cmd, err := s.in.ReadByte()
+	if err != nil {
+		return err
+	}
+	log.Printf("%02x", cmd)
+
+	// Status byte, ignore for command invocation
+	st, err := s.in.ReadByte()
+	if err != nil {
+		return err
+	}
+	log.Printf("%02x", st)
+
+	// Read in packet length
+	b, err := s.in.ReadByte()
+	if err != nil {
+		return err
+	}
+	log.Printf("%02x", b)
+	l := int(b)
+
+	b, err = s.in.ReadByte()
+	if err != nil {
+		return err
+	}
+	log.Printf("%02x", b)
+	l = l | (int(b) << 8)
+
+	var packet []byte
+	// Note we can't do the following as the BBC isn't fast enough!
+	// l, err := s.in.Read(packet)
+	for i := 0; i < l; i++ {
+		b, err = s.in.ReadByte()
+		if err != nil {
+			return err
+		}
+		packet = append(packet, b)
+	}
+
+	log.Printf("%02x Received %04x expected %04x", cmd, len(packet), l)
+
+	switch cmd {
+	case 'S':
+		s.search(string(packet))
+	default:
+		log.Printf("Command %02x unrecognised", cmd)
+	}
+
 	return nil
 }

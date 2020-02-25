@@ -5,6 +5,7 @@
 ; Where the command buffer lies
 commandBuffer = &1000
 bufferPos = &80
+sendPos = &82
 
 cmdNOP = 0
 cmdCRS = 'C'
@@ -19,12 +20,75 @@ cmdCRS = 'C'
 ; Exit:
 ;   X Y preserved
 .startCommand
-    PHX:PHY
-    TAY
+    PHA                         ; Save A & reset buffer
+    LDA #<commandBuffer
+    STA bufferPos
+    LDA #>commandBuffer
+    STA bufferPos+1
+    PLA
+    JSR appendCommand           ; Append command code
+    LDA #0                      ; Append 0 (as this is the status byte)
+    JSR appendCommand
+    JSR appendCommandBuffer     ; Skip 2 bytes for the buffer size
+    BRA appendCommandBuffer     ; We'll set these up later
+
+; Append a byte to the command Buffer
+; Entry:
+;   A   Value to append
+; Exit:
+;   A   corrupted
+;   X Y preserved
+;
+.appendCommand
+    STA (bufferPos)             ; Store
+.appendCommandBuffer
+    CLC                         ; Move bufferPos 1 byte
+    LDA #1
+    ADC bufferPos
+    STA bufferPos
+    LDA #0
+    ADC bufferPos+1
+    STA bufferPos+1
+    RTS
+
+.sendCommand
+    SEC                         ; Set command length
+    LDA bufferPos
+    SBC #<(commandBuffer+4)
+    STA commandBuffer+2
+    LDA bufferPos+1
+    SBC #>(commandBuffer+4)
+    STA commandBuffer+3
+
+    LDA #<commandBuffer         ; Set command pointer
+    STA sendPos
+    LDA #>commandBuffer
+    STA sendPos+1
+
+.sendCommandLoop
+    LDA (sendPos)               ; get current char
+    TAY                         ; Send to serial buffer
     LDA #$8A
     LDX #2
     JSR osbyte
-    PLY:PLX
+    BCS sendCommandLoop         ; Buffer was full
+
+    CLC                         ; Move sendPos 1 byte
+    LDA #1
+    ADC sendPos
+    STA sendPos
+    LDA #0
+    ADC sendPos+1
+    STA sendPos+1
+
+    LDA sendPos
+    CMP bufferPos
+    BNE sendCommandLoop         ; LSB not equal
+
+    LDA sendPos+1
+    CMP bufferPos+1
+    BNE sendCommandLoop         ; MSB not equal
+
     RTS
 
 ; osbyte buffers

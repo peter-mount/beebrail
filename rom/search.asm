@@ -12,10 +12,10 @@
     LDA (&F2),Y
     CMP #' '
     BMI search1
-    JSR startCommand
+    JSR appendCommand
     INY
     BNE search0
 .search1
-    JSR endCommand
+    JSR sendCommand
     JMP simpleResult
     RTS
