@@ -4,8 +4,6 @@
 
 ; Where the command buffer lies
 commandBuffer = &1000
-bufferPos = &80
-sendPos = &82
 
 cmdNOP = 0
 cmdCRS = 'C'
@@ -143,7 +141,7 @@ cmdCRS = 'C'
     PHX
 .serRead0
     LDA #&91                        ; Read character from buffer
-    LDX #1                          ;
+    LDX #1                          ; RS423 input buffer
     JSR osbyte
     BCS serRead0                    ; No data read so loop
     TYA                             ; Result in Y

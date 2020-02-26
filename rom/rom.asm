@@ -12,13 +12,26 @@
         ; MOS constants
         INCLUDE "rom/mos.asm"
 
-tmpaddr = &70                           ; 2 bytes for (tmpaddr),Y type calls
+; ********************************************************************************
+; Zero page allocations
+bufferPos       = &00                   ; Current position of command buffer
+sendPos         = &02                   ; Used in command processing
+highmem         = &04                   ; HIGHMEM
+page            = &06                   ; PAGE
+inputBufferPos  = &08                   ; line length in inputBuffer excluding CR
+tmpaddr         = &70                   ; 2 bytes for (tmpaddr),Y type calls, BASIC friendly
+                                        ; 5 bytes when used for OSWORD &00
 
+; Page 4,5,6 & 7 are for the current language
+
+inputBuffer = &700                      ; Page 7 for the command line input buffer
+
+; ********************************************************************************
 ; ROM header
 .romStart
-        EQUB 0,0,0                      ; Language entry point - unused unless bit6 in rom type is set
+        JMP language                    ; Language entry point - unused unless bit6 in rom type is set
         JMP serviceEntry                ; Service entry point
-        EQUB %10000010                  ; ROM type: Service Entry & 6502 cpu
+        EQUB %11000010                  ; ROM type: Service Entry, Language & 6502 cpu
         EQUB copyright-romStart
         EQUB 1                          ; Version
 .title
@@ -31,8 +44,11 @@ tmpaddr = &70                           ; 2 bytes for (tmpaddr),Y type calls
         EQUS " Area51.dev", 0
 
 ; Core modules
+        INCLUDE "rom/writeString.asm"
+        INCLUDE "rom/hex.asm"
         INCLUDE "rom/service.asm"
         INCLUDE "rom/protocol.asm"
+        INCLUDE "rom/language.asm"
 
 ; End of the rom.
 
