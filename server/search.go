@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	refclient "github.com/peter-mount/nre-feeds/darwinref/client"
 	"log"
 )
 
@@ -16,9 +15,7 @@ func (s *Server) search(cmd Packet) *Packet {
 			AppendString("Search requires minimum 3 characters")
 	}
 
-	refClient := &refclient.DarwinRefClient{Url: "https://ref.prod.a51.li"}
-
-	results, err := refClient.Search(param)
+	results, err := s.refClient.Search(param)
 	if err != nil {
 		log.Println(err)
 		return cmd.ErrorPacket(err)

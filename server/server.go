@@ -3,14 +3,15 @@ package server
 import (
 	"bufio"
 	"github.com/jacobsa/go-serial/serial"
+	refclient "github.com/peter-mount/nre-feeds/darwinref/client"
 	"io"
 	"log"
 )
 
 type Server struct {
-	port io.ReadWriteCloser
-
-	in *bufio.Reader
+	port      io.ReadWriteCloser // the serial port
+	in        *bufio.Reader      // reader on the port
+	refClient refclient.DarwinRefClient
 }
 
 func (s *Server) Name() string {
@@ -38,6 +39,7 @@ func (s *Server) PostInit() error {
 
 	s.in = bufio.NewReader(port)
 
+	s.refClient = refclient.DarwinRefClient{Url: "https://ref.prod.a51.li"}
 	return nil
 }
 
@@ -58,6 +60,8 @@ func (s *Server) processCommand() error {
 
 	var resp *Packet
 	switch cmd.Command {
+	case 'C':
+		resp = s.crs(cmd)
 	case 'S':
 		resp = s.search(cmd)
 	default:
