@@ -67,8 +67,8 @@
     LDY #0                          ; Find first non-space character
 .cmdSearch0
     LDA inputBuffer,Y
-    CMP #13                         ; End of command
-    BEQ cmdSearchError
+    CMP #13                         ; End of command, so nothing entered
+    BEQ cmdLine
     CMP #33
     BPL cmdSearch1                  ; Found something
     INY
@@ -125,9 +125,14 @@
 
 .langTable
     EQUS "CRS ", 0          : EQUW crsSearch    ; CRS search
-    EQUS "STATUS", 0        : EQUW status       ; Debug status
     EQUS "SEARCH ", 0       : EQUW search       ; Search crs by name
+    EQUS "STATUS", 0        : EQUW status       ; Debug status
+    EQUS "REM", 0           : EQUW rem          ; REM
     EQUB &FF                                    ; Table terminator
+
+; REM or remark, does nothing
+.rem
+    RTS
 
     INCLUDE "rom/error.asm"
     INCLUDE "rom/status.asm"
