@@ -50,7 +50,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) processCommand() error {
-	cmd := &Packet{}
+	cmd := Packet{}
 	err := cmd.Read(s.in)
 	if err != nil {
 		return err

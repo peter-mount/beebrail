@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func (s *Server) search(cmd *Packet) *Packet {
+func (s *Server) search(cmd Packet) *Packet {
 	param := cmd.PayloadAsString()
 
 	log.Println("Search", param)
