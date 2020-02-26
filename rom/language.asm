@@ -64,8 +64,73 @@
     JMP errEscape                   ; Escape
 
 .cmdLineNoEscape
-    STY inputBufferPos
-    BRA cmdLine                     ; do nothing for now
+    STY inputBufferPos              ; Save end of command line
+   ;LDA #0                          ; Set last char (13) to 0
+   ;STA inputBuffer,Y               ; There's no STZ inputBuffer,Y
+
+    LDY #0                          ; Find first non-space character
+.cmdSearch0
+    LDA inputBuffer,Y
+    CMP #13                         ; End of command
+    BEQ cmdSearchError
+    CMP #33
+    BPL cmdSearch1                  ; Found something
+    INY
+    BNE cmdSearch0
+    BRA cmdSearchError              ; overflow
+
+; Handles * commands
+; Entry:
+;   Y   Offset in inputBuffer of *
+.cmdOscli
+    INY                             ; Skip *
+    TYA
+    TAX
+    LDY #>inputBuffer
+    JSR oscli
+    BRA cmdLine
+
+.cmdSearch1
+    CMP #'*'
+    BEQ cmdOscli                    ; oscli command
+
+    STY tmpaddr                     ; Save so we can resume from same position
+    LDX #0
+.cmdSearch2
+    LDY tmpaddr                     ; reset Y to start of input
+.cmdSearch3
+    LDA langTable,X
+    BMI cmdSearchError              ; End of table so error
+    BEQ cmdSearchFound              ; 0 so we have found our command
+    CMP inputBuffer,Y
+    BNE cmdSearchSkip               ; Skip to next command
+    INY:INX                         ; Next char
+    BNE cmdSearch3                  ; Loop to next char
+.cmdSearchError
+    JMP errSyntax
+
+.cmdSearchFound
+    INX                             ; Skip to address
+    JSR cmdSearchExec               ; exec command
+    JMP cmdLine                     ; Back to prompt
+
+.cmdSearchSkip
+    INX
+    LDA langTable,X
+    BNE cmdSearchSkip               ; Loop until 0
+    INX:INX:INX                     ; Skip 0 & address
+    BRA cmdSearch2                  ; Resume loop
+
+; As there's no JSR (langTable,X)
+; On entry (&F2),Y will hold offset of first char after the command (if required)
+; Y should hold position in inputBuffer of next char after command
+.cmdSearchExec
+    JMP (langTable,X)
+
+.langTable
+    EQUS "STATUS", 0        : EQUW status       ; Debug status
+    EQUS "SEARCH ", 0       : EQUW search       ; Search crs by name
+    EQUB &FF                                    ; Table terminator
 
     INCLUDE "rom/error.asm"
     INCLUDE "rom/status.asm"

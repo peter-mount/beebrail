@@ -3,7 +3,7 @@
 ; ********************************************************************************
 
 ; OS calls
-os_cli = &FFF7
+oscli  = &FFF7
 osbyte = &FFF4
 osword = &FFF1
 oswrch = &FFEE

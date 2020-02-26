@@ -31,3 +31,7 @@
 .errEscape
     BRK
     EQUS &11, "Escape", 0
+
+.errSyntax
+    BRK
+    EQUS &12, "Syntax", 0

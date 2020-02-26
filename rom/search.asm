@@ -8,11 +8,11 @@
 ; The returned results are written to the console
 ;
 .search
-    JSR enableResult
     LDA #'S'                        ; Command 'S' is for search
     JSR startCommand
 .search0
-    LDA (&F2),Y                     ; Read from OSCLI buffer
+    ;LDA (&F2),Y                     ; Read from OSCLI buffer
+    LDA inputBuffer,Y               ; Read from OSCLI buffer
     CMP #' '                        ; Stop on first char < 32
     BMI search1
     JSR appendCommand               ; Append to command buffer
