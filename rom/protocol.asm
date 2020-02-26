@@ -2,24 +2,21 @@
 ; * The 6502 protocol client
 ; ********************************************************************************
 
-; Where the command buffer lies
-commandBuffer = &1000
-
-cmdNOP = 0
-cmdCRS = 'C'
-
 ; internal, resets the command buffer pointer
 .resetCommandBuffer
     PHA                         ; Save A & reset buffer
-    LDA #<commandBuffer
+    LDA page
     STA bufferPos
-    LDA #>commandBuffer
+    LDA page+1
     STA bufferPos+1
     PLA
     RTS
 
+.readNextSendPos
+    LDA (sendPos)
 ; internal increments sendPos
 .incSendPos
+    PHA
     CLC                         ; Move sendPos 1 byte
     LDA #1
     ADC sendPos
@@ -27,6 +24,7 @@ cmdCRS = 'C'
     LDA #0
     ADC sendPos+1
     STA sendPos+1
+    PLA
     RTS
 
 ; internal compares bufferPos and sendPos for equality
@@ -46,6 +44,7 @@ cmdCRS = 'C'
 ;   X Y preserved
 .startCommand
     JSR resetCommandBuffer
+    STA lastCommand             ; Save command code for later
     JSR appendCommand           ; Append command code
     LDA #0                      ; Append 0 (as this is the status byte)
     JSR appendCommand
@@ -73,16 +72,26 @@ cmdCRS = 'C'
 
 .sendCommand
     SEC                         ; Set command length
-    LDA bufferPos
-    SBC #<(commandBuffer+4)
-    STA commandBuffer+2
+    LDA bufferPos               ; tmpaddr = bufferPos - page
+    SBC page
+    STA tmpaddr
     LDA bufferPos+1
-    SBC #>(commandBuffer+4)
-    STA commandBuffer+3
+    SBC page+1
+    STA tmpaddr+1
 
-    LDA #<commandBuffer         ; Set command pointer
+    SEC                         ; command length = tmpaddr - 4
+    LDA tmpaddr
+    SBC #4
+    LDY #2
+    STA (page),Y
+    LDA tmpaddr+1
+    SBC #0
+    INY
+    STA (page),Y
+
+    LDA page                    ; Set sendPos to the start of the buffer
     STA sendPos
-    LDA #>commandBuffer
+    LDA page+1
     STA sendPos+1
 
 .sendCommandLoop
@@ -103,8 +112,56 @@ cmdCRS = 'C'
     LDY #0
     JSR readBuffer              ; read the header
 
-    LDX commandBuffer+2         ; Payload size
-    LDY commandBuffer+3         ; Run into reading the rest of the buffer
+    LDY #2                      ; XY = Payload size
+    LDA (page),Y
+    TAX
+    INY
+    LDA (page),Y
+    TAY
+    JSR readBuffer              ; read the payload
+
+    LDY #0                      ; check returned command is the same
+    LDA (page),y
+    CMP lastCommand
+    BEQ readBufferCheckStatus
+.errProtocol
+    BRK                         ; fail Protocol error
+    EQUS 1,"Protocol error",0
+
+.readBufferCheckStatus
+    LDY #1                      ; Read response status
+    LDA (page),Y
+    BNE readBufferError         ; fail on error
+
+; sets sendPos to the start of the payload
+.setSendPosPayload
+    CLC
+    LDA page                        ; Set sendPos to start of the payload
+    ADC #4
+    STA sendPos
+    LDA page+1
+    ADC #0
+    STA sendPos+1
+    RTS
+
+; Copy the payload to inputBuffer as a BRK using the response code as the error number
+.readBufferError
+    STZ inputBuffer                 ; BRK
+    STA inputBuffer+1               ; Status code
+    JSR setSendPosPayload           ; Point to payload address
+    LDX #2                          ; Start from inputBuffer+2
+.readBufferError1
+    JSR bufferPosSendPosEqual       ; Loop until we hit bufferPos
+    BEQ readBufferError2
+    JSR readNextSendPos             ; read payload
+    STA inputBuffer,X
+    INX
+    BRA readBufferError1
+.readBufferError2
+    STZ inputBuffer,X               ; Append terminating 0
+    JMP inputBuffer                 ; Invoke break
+
+; read XY bytes from RS423 and append to the buffer
 .readBuffer
     CLC                         ; sendPos = XY + bufferPos
     TXA
@@ -113,7 +170,6 @@ cmdCRS = 'C'
     TYA
     ADC bufferPos+1
     STA sendPos+1
-
 .readBufferLoop
     JSR serRead                 ; Read byte
     JSR appendCommand           ; Append to buffer
@@ -172,18 +228,25 @@ cmdCRS = 'C'
 ; For simple responses which are plain text but in BBC format just
 ; Write the received payload direct to the output
 .simpleResult
-    CLC
-    LDA #<(commandBuffer+4)         ; Set sendPos to start of the payload
-    STA sendPos
-    LDA #>(commandBuffer+4)
-    STA sendPos+1
-.simpleResultLoop                   ; Loop until sendPos hits bufferPos
-    JSR bufferPosSendPosEqual
+    JSR bufferPosSendPosEqual       ; Loop until sendPos hits bufferPos
     BEQ simpleResultEnd             ; Exit once done
-    LDA (sendPos)
+    JSR readNextSendPos
     JSR osasci
-    JSR incSendPos
-    BRA simpleResultLoop
+    BRA simpleResult
 .simpleResultEnd
-    LDA #13
-    JMP osasci
+    JMP osnewl
+
+; appendInputBuffer Copies the rest of the inputBuffer (usually after a command)
+; to the payload
+;
+; Entry:
+;   Y   Offset in inputBuffer to copy from
+.appendInputBuffer
+    LDA inputBuffer,Y               ; Read from inputBuffer
+    CMP #' '                        ; Stop on first char < 32
+    BMI appendInputBuffer1
+    JSR appendCommand               ; Append to command buffer
+    INY
+    BNE appendInputBuffer
+.appendInputBuffer1
+    RTS

@@ -19,12 +19,14 @@ sendPos         = &02                   ; Used in command processing
 highmem         = &04                   ; HIGHMEM
 page            = &06                   ; PAGE
 inputBufferPos  = &08                   ; line length in inputBuffer excluding CR
+lastCommand     = &09                   ; Last requested command
 tmpaddr         = &70                   ; 2 bytes for (tmpaddr),Y type calls, BASIC friendly
                                         ; 5 bytes when used for OSWORD &00
 
 ; Page 4,5,6 & 7 are for the current language
 
 inputBuffer = &700                      ; Page 7 for the command line input buffer
+                                        ; also scratch for error handling (see readBufferError)
 
 ; ********************************************************************************
 ; ROM header

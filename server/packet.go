@@ -15,7 +15,8 @@ type Packet struct {
 }
 
 func (p *Packet) ErrorPacket(err error) *Packet {
-	return p.Response(1, []byte(err.Error()))
+	return p.Response(1, []byte(err.Error())).
+		Append(0)
 }
 
 func (p *Packet) EmptyResponse(status byte) *Packet {
@@ -85,10 +86,7 @@ func (p *Packet) Read(in *bufio.Reader) error {
 
 func (p *Packet) Write(out io.Writer) error {
 	b := []byte{p.Command, p.Status, byte(p.Length & 0xff), byte((p.Length >> 8) & 0xff)}
+	b = append(b, p.Payload...)
 	_, err := out.Write(b)
-	if err != nil {
-		return err
-	}
-	_, err = out.Write(p.Payload)
 	return err
 }

@@ -62,6 +62,8 @@ func (s *Server) processCommand() error {
 		resp = s.search(cmd)
 	default:
 		log.Printf("Command %02x unrecognised", cmd)
+		resp = cmd.EmptyResponse(0xff).
+			AppendString("Unsupported")
 	}
 
 	if resp == nil {

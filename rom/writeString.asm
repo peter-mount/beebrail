@@ -23,11 +23,6 @@
 	PLA
 	RTS
 
-; Write a new line
-.writeNewline
-	LDA #13
-	JMP osasci
-
 ; Write a space
 .writeSpace
 	LDA #' '

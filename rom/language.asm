@@ -38,8 +38,6 @@
 
     CLI                             ; Enable IRQ's
 
-    JSR status  ; Temp debug
-
 ; cmdLine editor
 .cmdLine
     LDA #'R'
@@ -65,8 +63,6 @@
 
 .cmdLineNoEscape
     STY inputBufferPos              ; Save end of command line
-   ;LDA #0                          ; Set last char (13) to 0
-   ;STA inputBuffer,Y               ; There's no STZ inputBuffer,Y
 
     LDY #0                          ; Find first non-space character
 .cmdSearch0
@@ -128,9 +124,13 @@
     JMP (langTable,X)
 
 .langTable
+    EQUS "CRS ", 0          : EQUW crsSearch    ; CRS search
     EQUS "STATUS", 0        : EQUW status       ; Debug status
     EQUS "SEARCH ", 0       : EQUW search       ; Search crs by name
     EQUB &FF                                    ; Table terminator
 
     INCLUDE "rom/error.asm"
     INCLUDE "rom/status.asm"
+
+    INCLUDE "rom/crs.asm"
+    INCLUDE "rom/search.asm"

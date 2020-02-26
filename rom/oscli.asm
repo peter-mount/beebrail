@@ -42,6 +42,3 @@
 .oscliTable
     EQUS "RAIL",0       : EQUW switchLanguage   ; Language entry point
     EQUB &FF                                    ; Table terminator
-
-    INCLUDE "rom/crs.asm"
-    INCLUDE "rom/search.asm"

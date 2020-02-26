@@ -4,17 +4,8 @@
 
 ;
 .crsSearch
-    LDA #cmdCRS
+    LDA #'C'                        ; Command 'C'
     JSR startCommand
-    LDX #1
-.crsSearch0
-    LDA (&F2),Y
-    CMP #' '
-    BMI crsSearch1
-    JSR startCommand
-    INY
-    BNE crsSearch0
-.crsSearch1
-    ;JSR endCommand
-    ; receive result
-    RTS
+    JSR appendInputBuffer           ; Add command line to payload
+    JSR sendCommand                 ; Send command
+    JMP simpleResult                ; Simple result just plain text

@@ -10,15 +10,6 @@
 .search
     LDA #'S'                        ; Command 'S' is for search
     JSR startCommand
-.search0
-    ;LDA (&F2),Y                     ; Read from OSCLI buffer
-    LDA inputBuffer,Y               ; Read from OSCLI buffer
-    CMP #' '                        ; Stop on first char < 32
-    BMI search1
-    JSR appendCommand               ; Append to command buffer
-    INY
-    BNE search0
-.search1
+    JSR appendInputBuffer           ; Add command line to payload
     JSR sendCommand                 ; Send command
     JMP simpleResult                ; Simple result just plain text
-    RTS

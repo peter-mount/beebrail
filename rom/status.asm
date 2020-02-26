@@ -16,7 +16,7 @@
     JSR writeHex
     LDA highmem
     JSR writeHex
-    JMP writeNewline
+    JMP osnewl
 .status0
     EQUS "PAGE ",0
 .status1
