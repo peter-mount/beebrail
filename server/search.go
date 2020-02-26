@@ -10,6 +10,12 @@ func (s *Server) search(cmd *Packet) *Packet {
 	param := cmd.PayloadAsString()
 
 	log.Println("Search", param)
+
+	if len(param) < 3 {
+		return cmd.EmptyResponse(1).
+			AppendString("Search requires minimum 3 characters")
+	}
+
 	refClient := &refclient.DarwinRefClient{Url: "https://ref.prod.a51.li"}
 
 	results, err := refClient.Search(param)

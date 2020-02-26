@@ -2,12 +2,14 @@ package server
 
 import (
 	"bufio"
+	"errors"
 	"io"
 )
 
+// Packet represents the actual packet sent over the wire
 type Packet struct {
 	Command byte   // The command code
-	Status  byte   // The status when being returned
+	Status  byte   // The status when being returned, optional for commands, e.g. sub-command
 	Length  uint16 // The length of the payload
 	Payload []byte // The payload
 }
@@ -43,41 +45,39 @@ func (p *Packet) PayloadAsString() string {
 	return string(p.Payload)
 }
 
-// Read reads a packet from a Reader
-func (p *Packet) Read(in *bufio.Reader) error {
-	var err error
-	p.Command, err = in.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	// Status byte, ignore for command invocation
-	p.Status, err = in.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	// Read in packet length
-	l1, err := in.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	l2, err := in.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	p.Length = uint16(l1) | (uint16(l2) << 8)
-
-	// Note we can't do the following as the BBC isn't fast enough!
-	// l, err := s.in.Read(packet)
-	for i := uint16(0); i < p.Length; i++ {
+// readBlock reads l bytes from in.
+// We can't do a simple Read([]byte) call as thats too fast when reading from a BBC over RS423
+// so we have to do it with individual reads
+func readBlock(in *bufio.Reader, l uint16) ([]byte, error) {
+	var buf []byte
+	for i := uint16(0); i < l; i++ {
 		b, err := in.ReadByte()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		p.Payload = append(p.Payload, b)
+		buf = append(buf, b)
+	}
+	return buf, nil
+}
+
+// Read reads a packet from a Reader
+func (p *Packet) Read(in *bufio.Reader) error {
+	// Read the common header
+	b, err := readBlock(in, 4)
+	if err != nil {
+		return err
+	}
+	if len(b) != 4 {
+		return errors.New("incomplete header")
+	}
+
+	p.Command = b[0]
+	p.Status = b[1]
+	p.Length = uint16(b[2]) | (uint16(b[3]) << 8)
+
+	p.Payload, err = readBlock(in, p.Length)
+	if len(p.Payload) != int(p.Length) {
+		return errors.New("incomplete payload")
 	}
 
 	return nil

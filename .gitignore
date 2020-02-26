@@ -8,3 +8,4 @@ copyright.asm
 /boot
 .idea
 go.sum
+/dest
