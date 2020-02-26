@@ -14,10 +14,12 @@
     LDA #&7C                        ; Clear escape condition
     JSR osbyte
 
-   ;LDA (brkAddress)                ; error code if we want to compare it for custom handling
-
-    JSR osnewl                      ; Force newline
-    LDY #1                          ; Skip the error code
+    LDY #0
+    LDA (brkAddress),Y              ; error code
+    JSR writeHex
+    JSR writeSpace
+.errorHandler3
+    INY                             ; Skip the error code
 .errorHandler0
     LDA (brkAddress),Y
     BEQ errorHandler1               ; Found end
@@ -29,6 +31,7 @@
     JMP cmdLine                     ; Back to command prompt
 
 .errEscape
+    JSR osnewl                      ; Force newline
     BRK
     EQUS &11, "Escape", 0
 
