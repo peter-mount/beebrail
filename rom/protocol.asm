@@ -228,13 +228,15 @@
 ; For simple responses which are plain text but in BBC format just
 ; Write the received payload direct to the output
 .simpleResult
+    JSR useEntireScreen             ; Use the entire screen (for now)
+.simpleResultLoop
     JSR bufferPosSendPosEqual       ; Loop until sendPos hits bufferPos
     BEQ simpleResultEnd             ; Exit once done
     JSR readNextSendPos
-    JSR osasci
-    BRA simpleResult
+    JSR oswrch
+    BRA simpleResultLoop
 .simpleResultEnd
-    JMP osnewl
+    RTS
 
 ; appendInputBuffer Copies the rest of the inputBuffer (usually after a command)
 ; to the payload

@@ -1,33 +1,49 @@
 package server
 
 import (
-	"fmt"
 	"log"
 )
 
 func (s *Server) crs(cmd Packet) *Packet {
-	param := cmd.PayloadAsString()
+	crs := cmd.PayloadAsString()
 
-	log.Println("CRS", param)
+	log.Println("CRS", crs)
 
-	response, err := s.refClient.GetCrs(param)
+	response, err := s.refClient.GetCrs(crs)
 	if err != nil {
 		return cmd.ErrorPacket(err)
 	}
 
-	resp := cmd.EmptyResponse(0)
-
-	for i, tpl := range response.Tiploc {
-		if i > 0 {
-			resp.Append(13)
+	r := NewResult(func(p *Page) {
+		x := (40 - len(crs)) >> 1
+		for y := 1; y <= 2; y++ {
+			p.Tab(0, y).
+				AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
+				Tab(x, y).
+				Append(crs)
 		}
-		resp.AppendString(fmt.Sprintf("%3.3s %-7.7s %-2.2s %s",
-			tpl.Crs,
-			tpl.Tiploc,
-			tpl.Toc,
-			tpl.Name,
-		))
+	})
+
+	r.CurrentPage.Tab(0, 3).
+		AppendChar(AlphaYellow).
+		Append("CRS Tiploc  Toc Name")
+
+	if response != nil {
+		for y, tpl := range response.Tiploc {
+			if y < 20 {
+				r.CurrentPage.Tab(0, 4+y)
+				if tpl.Crs == crs {
+					r.CurrentPage.AppendChar(AlphaWhite)
+				} else {
+					r.CurrentPage.AppendChar(AlphaCyan)
+				}
+				r.CurrentPage.Append(tpl.Crs).
+					Tab(5, -1).Append(tpl.Tiploc).
+					Tab(13, -1).Append(tpl.Toc).
+					Tab(17, -1).Append(tpl.Name)
+			}
+		}
 	}
 
-	return resp
+	return cmd.EmptyResponse(0).AppendPages(r)
 }

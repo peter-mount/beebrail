@@ -40,6 +40,7 @@
 
 ; cmdLine editor
 .cmdLine
+    JSR useCommandRow               ; Use top row only
     LDA #'R'
     JSR oswrch
     LDA #'>'

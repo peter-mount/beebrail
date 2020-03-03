@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/jacobsa/go-serial/serial"
 	refclient "github.com/peter-mount/nre-feeds/darwinref/client"
+	ldbclient "github.com/peter-mount/nre-feeds/ldb/client"
 	"io"
 	"log"
 )
@@ -12,6 +13,7 @@ type Server struct {
 	port      io.ReadWriteCloser // the serial port
 	in        *bufio.Reader      // reader on the port
 	refClient refclient.DarwinRefClient
+	ldbClient ldbclient.DarwinLDBClient
 }
 
 func (s *Server) Name() string {

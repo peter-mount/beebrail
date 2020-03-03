@@ -36,10 +36,30 @@ func (p *Packet) AppendString(payload string) *Packet {
 	return p.Append([]byte(payload)...)
 }
 
-func (p *Packet) Append(payload ...byte) *Packet {
+func (p *Packet) AppendCString(payload string) *Packet {
+	return p.AppendString(payload).Append(0)
+}
+
+func (p *Packet) AppendCStrings(cols int, v []string) *Packet {
+	for _, h := range v {
+		p.AppendCString(h)
+	}
+
+	if len(v) < cols {
+		p.Append(0)
+	}
+
+	return p
+}
+
+func (p *Packet) AppendBytes(payload []byte) *Packet {
 	p.Payload = append(p.Payload, payload...)
 	p.Length = uint16(len(p.Payload))
 	return p
+}
+
+func (p *Packet) Append(payload ...byte) *Packet {
+	return p.AppendBytes(payload)
 }
 
 func (p *Packet) PayloadAsString() string {
@@ -89,4 +109,11 @@ func (p *Packet) Write(out io.Writer) error {
 	b = append(b, p.Payload...)
 	_, err := out.Write(b)
 	return err
+}
+
+func (p *Packet) AppendInt16(i int) *Packet {
+	return p.Append(
+		byte(i&255),
+		byte((i>>8)&255),
+	)
 }

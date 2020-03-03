@@ -20,6 +20,8 @@ highmem         = &04                   ; HIGHMEM
 page            = &06                   ; PAGE
 inputBufferPos  = &08                   ; line length in inputBuffer excluding CR
 lastCommand     = &09                   ; Last requested command
+curPage         = &0a                   ; The current page in a result set being displayed
+totalPages      = &0b                   ; The number of pages in a result set
 tmpaddr         = &70                   ; 2 bytes for (tmpaddr),Y type calls, BASIC friendly
                                         ; 5 bytes when used for OSWORD &00
 
@@ -51,6 +53,7 @@ inputBuffer = &700                      ; Page 7 for the command line input buff
         INCLUDE "rom/service.asm"
         INCLUDE "rom/protocol.asm"
         INCLUDE "rom/language.asm"
+        INCLUDE "rom/screen.asm"
 
 ; End of the rom.
 

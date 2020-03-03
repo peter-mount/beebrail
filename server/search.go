@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -21,12 +20,34 @@ func (s *Server) search(cmd Packet) *Packet {
 		return cmd.ErrorPacket(err)
 	}
 
-	resp := cmd.EmptyResponse(0)
-	for _, r := range results {
-		resp.AppendString(fmt.Sprintf("%s %s%c", r.Crs, r.Name, 13))
+	r := NewResult(func(p *Page) {
+		m := "Search results"
+		x := (40 - len(m)) >> 1
+		for y := 1; y <= 2; y++ {
+			p.Tab(0, y).
+				AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
+				Tab(x, y).
+				Append(m)
+		}
+	})
+
+	r.CurrentPage.Tab(0, 3).
+		AppendChar(AlphaYellow).
+		Append("CRS Station")
+
+	for y, res := range results {
+		if y < 20 {
+			r.CurrentPage.Tab(0, 4+y)
+			if res.Crs == param {
+				r.CurrentPage.AppendChar(AlphaWhite)
+			} else {
+				r.CurrentPage.AppendChar(AlphaCyan)
+			}
+			r.CurrentPage.Append(res.Crs).
+				Tab(5, -1).Append(res.Name)
+			log.Println(res.Name, res.Label, res.Distance)
+		}
 	}
 
-	//log.Println(strings.ReplaceAll(string(b[:]), "\r", "\r\n"))
-
-	return resp
+	return cmd.EmptyResponse(0).AppendPages(r)
 }
