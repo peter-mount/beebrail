@@ -252,3 +252,108 @@
     BNE appendInputBuffer
 .appendInputBuffer1
     RTS
+
+; Shows mode7 response
+.showResponse
+    STZ curPage                     ; reset to first page
+    LDA (sendPos)                   ; set totalPages from result
+    STA totalPages
+
+; Redisplay the current page
+.displayPage
+    LDA curPage                     ; Check page number
+    CMP totalPages                  ; If >= totalPages then reset
+    BMI displayPage0
+    STZ curPage
+.displayPage0
+    LDA curPage                     ; Set Y to position in header to page offset for the required page
+    CLC
+    ROL A                           ; *2
+    ADC #1                          ; +1 for page count
+    TAY
+
+    CLC                             ; pageStart = sendPos + page offset
+    LDA (sendPos),Y
+    ADC sendPos
+    STA pageStart
+    INY
+    LDA (sendPos),Y
+    ADC sendPos+1
+    STA pageStart+1
+
+    CLC                             ; pageEnd = sendPos + page offset of next page
+    INY
+    LDA (sendPos),Y
+    ADC sendPos
+    STA pageEnd
+    INY
+    LDA (sendPos),Y
+    ADC sendPos+1
+    STA pageEnd+1
+
+.refreshPage
+    LDA pageStart                   ; copy page start
+    STA tmpaddr
+    LDA pageStart+1
+    STA tmpaddr+1
+
+    JSR cls                         ; Clear screen
+.displayPage1
+    LDA tmpaddr                     ; Check for end of page
+    CMP pageEnd
+    BNE displayPage2
+    LDA tmpaddr+1
+    CMP pageEnd+1
+    BNE displayPage2
+    RTS
+.displayPage2
+    LDA (tmpaddr)
+    JSR oswrch
+
+    CLC
+    LDA tmpaddr
+    ADC #1
+    STA tmpaddr
+    LDA tmpaddr+1
+    ADC #0
+    STA tmpaddr+1
+    BRA displayPage1
+
+.debug
+    JSR cls
+    LDA curPage
+    jsr writeHex
+    jsr writeSpace
+
+    LDA totalPages
+    jsr writeHex
+    jsr osnewl
+
+    LDA sendPos+1
+    jsr writeHex
+    LDA sendPos
+    jsr writeHex
+    jsr osnewl
+
+    LDA pageStart+1
+    jsr writeHex
+    LDA pageStart
+    jsr writeHex
+    jsr osnewl
+
+    LDA pageEnd+1
+    jsr writeHex
+    LDA pageEnd
+    jsr writeHex
+    jsr osnewl
+
+    JSR osnewl
+    LDX #16
+    LDY #0
+.debug0
+    LDA (sendPos),Y
+    JSR writeHex
+    INY
+    DEX
+    BNE debug0
+    RTS

@@ -43,23 +43,65 @@ type Pages struct {
 }
 
 func (p *Packet) AppendPages(r *Pages) *Packet {
-	//p.Append(byte(len(r.Pages)))
-	p.Append(12)
+
+	// Create a slice of each page's content.
+	// We need this so we know the size of each page
+	var pages [][]byte
+
 	for _, page := range r.Pages {
+		var buf []byte
 		for ln, line := range page.Data {
 			// skip line 0 as thats reserved for the UI
 			if ln > 0 {
 				if line == nil || len(line) == 0 {
-					p.Append(13, 10)
+					buf = append(buf, 13, 10)
 				} else {
-					p.Append(line...)
+					buf = append(buf, line...)
 					if len(line) < 40 {
-						p.Append(13, 10)
+						buf = append(buf, 13, 10)
 					}
 				}
 			}
 		}
+		pages = append(pages, buf)
 	}
+
+	// Now the output
+	//
+	// This consists of the number of pages, a list of offsets to each page then the page data
+	//
+	// e.g. for a 2 page response
+	//
+	// Offs Len	Content
+	// 		0	1		Number of pages = 2
+	//	  1	2		Offset to page 0
+	//		3 2		Offset to page 1
+	//		5 2		Offset to end of all pages
+	//		6	n		Start of page 0, value in 1,2 = 0006
+
+	// So if we want page 0 then we look at bytes 1&2 for the start & output until we hit offset in bytes 3,4
+	// For page 1 then its bytes 3&4 to 5&6
+	//
+
+	// Offset from begining to the first page, i.e. the page count & the offsets for pages + end offset
+	base := 1 + (2 * len(pages)) + 2
+
+	// number of pages max 127
+	p.Append(byte(len(pages)))
+
+	// Now the offsets to each page
+	for _, pg := range pages {
+		p.AppendInt16(base)
+		base = base + len(pg)
+	}
+	// Final offset is for the last page
+	p.AppendInt16(base)
+
+	// Now the page content
+	for _, pg := range pages {
+		p.Append(pg...)
+	}
+
 	return p
 }
 

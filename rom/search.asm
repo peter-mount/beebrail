@@ -32,7 +32,7 @@
     JSR writeString
 
     JSR sendCommand                 ; Send command
-    JMP simpleResult                ; Simple result just plain text
+    JMP showResponse                ; Mode7 response
 
 .searchingText
     EQUS 12, 131, 157, 129, "Searching...", 0

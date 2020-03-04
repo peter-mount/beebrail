@@ -113,7 +113,7 @@ func (p *Packet) Write(out io.Writer) error {
 
 func (p *Packet) AppendInt16(i int) *Packet {
 	return p.Append(
-		byte(i&255),
-		byte((i>>8)&255),
+		byte(i&0xff),
+		byte((i>>8)&0xff),
 	)
 }
