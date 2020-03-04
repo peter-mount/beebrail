@@ -54,7 +54,11 @@ func (s *Server) departures(cmd Packet) *Packet {
 			// Destination
 			dest := s.Destination
 			if d, ok := sr.Tiplocs.Get(dest); ok {
-				dest = d.Name
+				if d.Crs == crs {
+					dest = "Terminates here"
+				} else {
+					dest = d.Name
+				}
 			}
 			if len(dest) > 17 {
 				dest = dest[:17]
