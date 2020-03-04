@@ -19,6 +19,11 @@
     LDX #&FF                        ; Reset the stack
     TXS
 
+    LDA #22                         ; Switch to shadow mode 7
+    JSR oswrch
+    LDA #128+7
+    JSR oswrch
+
     LDA #&84                        ; set HIGHMEM
     JSR osbyte
     STX highmem
@@ -42,11 +47,14 @@
 
 ; cmdLine editor
 .cmdLine
-    JSR useEntireScreen
+    LDA #0:TAX:TAY                  ; Text window to prompt
+    JSR setTextViewPort
     LDX #<prompt
     LDY #>prompt
     JSR writeString
-    JSR useCommandRow               ; Use top row only
+    JSR useCommandRow               ; Use command row only
+    LDA #12                         ; Clear command row
+    JSR oswrch
 
     LDA #>inputBuffer               ; Page 7 is our input buffer
     STZ tmpaddr                     ; Input buffer

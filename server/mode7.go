@@ -44,8 +44,21 @@ type Pages struct {
 
 func (p *Packet) AppendPages(r *Pages) *Packet {
 	//p.Append(byte(len(r.Pages)))
+	p.Append(12)
 	for _, page := range r.Pages {
-		p.Append(page.Data...)
+		for ln, line := range page.Data {
+			// skip line 0 as thats reserved for the UI
+			if ln > 0 {
+				if line == nil || len(line) == 0 {
+					p.Append(13, 10)
+				} else {
+					p.Append(line...)
+					if len(line) < 40 {
+						p.Append(13, 10)
+					}
+				}
+			}
+		}
 	}
 	return p
 }
@@ -57,14 +70,10 @@ func NewResult(newpage func(*Page)) *Pages {
 }
 
 type Page struct {
-	Data []uint8 // 40x25 character display
-	r    *Pages  // parent result
-	x    int     // x position in screen
-	y    int     // y position in screen
-}
-
-func (p *Page) offset() int {
-	return p.x + (40 * p.y)
+	Data [][]uint8 // 40x25 character display
+	r    *Pages    // parent result
+	x    int       // x position in screen
+	y    int       // y position in screen
 }
 
 // Tab moves the cursor to a new location
@@ -82,17 +91,11 @@ func (p *Page) Tab(x, y int) *Page {
 
 // Add a new page
 func (r *Pages) AddPage() *Page {
-	s := 24 * 40
 	p := &Page{
-		Data: make([]byte, s),
+		Data: make([][]byte, 25),
 		r:    r,
 		x:    0,
 		y:    0,
-	}
-
-	// Fill page with spaces
-	for i := 0; i < s; i++ {
-		p.Data[i] = ' '
 	}
 
 	r.Pages = append(r.Pages, p)
@@ -120,7 +123,10 @@ func (p *Page) AppendChars(s ...uint8) *Page {
 
 // Append char at position
 func (p *Page) AppendChar(c uint8) *Page {
-	p.Data[p.offset()] = c
+	for len(p.Data[p.y]) <= p.x {
+		p.Data[p.y] = append(p.Data[p.y], ' ')
+	}
+	p.Data[p.y][p.x] = c
 	p.x = p.x + 1
 	if p.x >= 40 {
 		return p.Newline()

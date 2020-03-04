@@ -229,7 +229,7 @@
 ; Write the received payload direct to the output
 .simpleResult
     JSR useEntireScreen             ; Use the entire screen (for now)
-    LDA #30
+    LDA #12
     JSR oswrch
 .simpleResultLoop
     JSR bufferPosSendPosEqual       ; Loop until sendPos hits bufferPos

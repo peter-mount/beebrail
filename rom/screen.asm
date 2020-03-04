@@ -9,7 +9,7 @@
     JSR vdu23
 
     LDA #0                  ; Set text window
-    LDX #0
+    LDX #1
     LDY #24
     BRA setTextViewPort
 
@@ -22,7 +22,11 @@
     LDA #23                 ; Set text window
     LDX #0
     LDY #0
-; Sets the text view port. X being the top line number, Y the bottom line number of the page
+; Sets the text view port.
+; Entry:
+;   A   left column
+;   X   top line number
+;   Y   bottom line number
 .setTextViewPort
     PHA                     ; VDU 28,A,Y,39,X       sets text view port
     LDA #28
@@ -36,15 +40,15 @@
     TXA
     JSR oswrch
 
-    LDY #16
-    LDX #%0010000          ; viewport wraps
+    LDX #16                 ; VDU 23,16,f;0;0;0     Disable scrolling
+    LDY #%0010000           ; viewport wraps
 
 ; vdu23 handles simple flag settings
 ;
 ; Equivalent to VDU 23,X,Y;0;0;0
 ;
 .vdu23
-    LDA #23                 ; VDU 23,16,f;0;0;0     Disable scrolling
+    LDA #23                 ; VDU 23,X,Y;0;0;0     Disable scrolling
     JSR oswrch
     TXA
     JSR oswrch
@@ -52,23 +56,32 @@
     JSR oswrch
     LDY #7                  ; Remaining 7 bytes are 0
     LDA #0
-.setTextViewPort0
+.vdu23Loop
     JSR oswrch
     DEY
-    BNE setTextViewPort0
+    BNE vdu23Loop
     RTS
 
 ; Main home page
 .homePage
-    LDX #<homePage0         ; Display home page
-    LDY #>homePage0
-    JMP writeString
-.homePage0
-    EQUB 22, 128+7,10       ; Mode 7 in shadow
-    EQUS 132,157,135,141, 31, 10, 1, "UK Departure Boards", 13, 10
-    EQUS 132,157,135,141, 31, 10, 2, "UK Departure Boards", 13, 10
+    JSR useEntireScreen
+    LDA #12
+    JSR oswrch
+    LDX #0
+    LDY #homePageEnd-homePageStart
+.homePageLoop
+    LDA homePageStart,X
+    JSR oswrch
+    INX
+    DEY
+    BNE homePageLoop
+    RTS
+.homePageStart
+    EQUS 30
+    EQUS 132, 157,135,141, 31, 10, 0, "UK Departure Boards", 13, 10
+    EQUS 132, 157,135,141, 31, 10, 1, "UK Departure Boards", 13, 10
     EQUS 135, "List of available commands:", 13, 10
-    EQUS 131, "CRS crs", 31, 13, 4, 134, "Search by CRS", 13, 10
-    EQUS 131, "HELP", 31, 13, 5, 134, "Show help", 13, 10
-    EQUS 131, "SEARCH name", 31, 13, 6, 134,"Search by name"
-    EQUB 0
+    EQUS 131, "CRS crs", 31, 13, 3, 134, "Search by CRS", 13, 10
+    EQUS 131, "HELP", 31, 13, 4, 134, "Show help", 13, 10
+    EQUS 131, "SEARCH name", 31, 13, 5, 134,"Search by name"
+.homePageEnd
