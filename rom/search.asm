@@ -20,5 +20,14 @@
 .searchMode7
     JSR startCommand
     JSR appendInputBuffer           ; Add command line to payload
+
+    JSR useCommandRow               ; Show searching logo
+    LDX #<searchingText
+    LDY #>searchingText
+    JSR writeString
+
     JSR sendCommand                 ; Send command
     JMP simpleResult                ; Simple result just plain text
+
+.searchingText
+    EQUS 12, 131, 157, 129, "Searching...", 0
