@@ -319,41 +319,26 @@
     STA tmpaddr+1
     BRA displayPage1
 
-.debug
-    JSR cls
+; rotate pages every 5 seconds
+.rotatePages
+    JSR useCommandRow
+    LDA #&81
+    LDX #<500
+    LDY #>500
+    JSR osbyte
+    BCC rotatePages1
+    CPY #&1B
+    BNE rotatePages1
+    JMP errEscape
+
+.rotatePages1
+    LDA totalPages                  ; just 1 page then do nothing
+    CMP #1
+    BEQ rotatePages
+
+    CLC                             ; cycle to next page
     LDA curPage
-    jsr writeHex
-    jsr writeSpace
-
-    LDA totalPages
-    jsr writeHex
-    jsr osnewl
-
-    LDA sendPos+1
-    jsr writeHex
-    LDA sendPos
-    jsr writeHex
-    jsr osnewl
-
-    LDA pageStart+1
-    jsr writeHex
-    LDA pageStart
-    jsr writeHex
-    jsr osnewl
-
-    LDA pageEnd+1
-    jsr writeHex
-    LDA pageEnd
-    jsr writeHex
-    jsr osnewl
-
-    JSR osnewl
-    LDX #16
-    LDY #0
-.debug0
-    LDA (sendPos),Y
-    JSR writeHex
-    INY
-    DEX
-    BNE debug0
-    RTS
+    ADC #1
+    STA curPage
+    JSR displayPage
+    BRA rotatePages

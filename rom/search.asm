@@ -5,7 +5,8 @@
 ; Display departure boards
 .departures
     LDA #'D'                        ; Command 'D'
-    BRA searchMode7
+    JSR searchMode7
+    JMP rotatePages
 
 ; Handles the search by crs code
 .crsSearch
