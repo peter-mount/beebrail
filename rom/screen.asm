@@ -7,6 +7,8 @@
     LDX #1                  ; Disable cursor
     LDY #0
     JSR vdu23
+
+    LDA #0                  ; Set text window
     LDX #0
     LDY #24
     BRA setTextViewPort
@@ -17,13 +19,15 @@
     LDY #1
     JSR vdu23
 
+    LDA #23                 ; Set text window
     LDX #0
     LDY #0
 ; Sets the text view port. X being the top line number, Y the bottom line number of the page
 .setTextViewPort
-    LDA #28                 ; VDU 28,0,Y,39,X       sets text view port
+    PHA                     ; VDU 28,A,Y,39,X       sets text view port
+    LDA #28
     JSR oswrch
-    LDA #0
+    PLA
     JSR oswrch
     TYA
     JSR oswrch
@@ -53,3 +57,18 @@
     DEY
     BNE setTextViewPort0
     RTS
+
+; Main home page
+.homePage
+    LDX #<homePage0         ; Display home page
+    LDY #>homePage0
+    JMP writeString
+.homePage0
+    EQUB 22, 128+7,10       ; Mode 7 in shadow
+    EQUS 132,157,135,141, 31, 10, 1, "UK Departure Boards", 13, 10
+    EQUS 132,157,135,141, 31, 10, 2, "UK Departure Boards", 13, 10
+    EQUS 135, "List of available commands:", 13, 10
+    EQUS 131, "CRS crs", 31, 13, 4, 134, "Search by CRS", 13, 10
+    EQUS 131, "HELP", 31, 13, 5, 134, "Show help", 13, 10
+    EQUS 131, "SEARCH name", 31, 13, 6, 134,"Search by name"
+    EQUB 0

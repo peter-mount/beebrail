@@ -16,7 +16,7 @@
 .writeStringLoop
 	LDA (tmpaddr),Y
 	BEQ writeStringEnd
-	JSR osasci
+	JSR oswrch
 	INY
 	BNE writeStringLoop
 .writeStringEnd

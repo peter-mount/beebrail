@@ -38,13 +38,15 @@
 
     CLI                             ; Enable IRQ's
 
+    JSR homePage                    ; show home page
+
 ; cmdLine editor
 .cmdLine
+    JSR useEntireScreen
+    LDX #<prompt
+    LDY #>prompt
+    JSR writeString
     JSR useCommandRow               ; Use top row only
-    LDA #'R'
-    JSR oswrch
-    LDA #'>'
-    JSR oswrch
 
     LDA #>inputBuffer               ; Page 7 is our input buffer
     STZ tmpaddr                     ; Input buffer
@@ -124,8 +126,12 @@
 .cmdSearchExec
     JMP (langTable,X)
 
+.prompt
+    EQUS 30, 134, "departureboards.mobi", 135, '*', 0
+
 .langTable
     EQUS "CRS ", 0          : EQUW crsSearch    ; CRS search
+    EQUS "HELP", 0          : EQUW homePage     ; Help
     EQUS "SEARCH ", 0       : EQUW search       ; Search crs by name
     EQUS "STATUS", 0        : EQUW status       ; Debug status
     EQUS "REM", 0           : EQUW rem          ; REM

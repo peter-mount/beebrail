@@ -31,9 +31,7 @@ rm -f $DISK $TMPDISK boot
   # and it doesn't always pick up the new image immediately
   echo "REM Image build date"
   echo "REM $(date)"
-  echo
   echo "*SRLOAD BRAIL 8000 4"
-  echo "*ROMS"
 ) >boot
 
 # Compile a local rom image, for programming into an actual EEPROM
