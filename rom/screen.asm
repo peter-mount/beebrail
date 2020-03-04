@@ -87,7 +87,8 @@
     EQUS 132, 157,135,141, 31, 10, 0, "UK Departure Boards", 13, 10
     EQUS 132, 157,135,141, 31, 10, 1, "UK Departure Boards", 13, 10
     EQUS 135, "List of available commands:", 13, 10
-    EQUS 131, "CRS crs", 31, 13, 3, 134, "Search by CRS", 13, 10
-    EQUS 131, "HELP", 31, 13, 4, 134, "Show help", 13, 10
-    EQUS 131, "SEARCH name", 31, 13, 5, 134,"Search by name"
+    EQUS 131, "DEPART crs", 31, 13, 3, 134, "Departures", 13, 10
+    EQUS 131, "CRS crs", 31, 13, 4, 134, "Search by CRS", 13, 10
+    EQUS 131, "HELP", 31, 13, 5, 134, "Show help", 13, 10
+    EQUS 131, "SEARCH name", 31, 13, 6, 134,"Search by name"
 .homePageEnd

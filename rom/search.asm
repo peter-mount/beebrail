@@ -2,6 +2,11 @@
 ; * The basic Mode 7 based commands
 ; ********************************************************************************
 
+; Display departure boards
+.departures
+    LDA #'D'                        ; Command 'D'
+    BRA searchMode7
+
 ; Handles the search by crs code
 .crsSearch
     LDA #'C'                        ; Command 'C'

@@ -138,6 +138,7 @@
     EQUS 30, 134, "departureboards.mobi", 135, '*', 0
 
 .langTable
+    EQUS "DEPART ", 0       : EQUW departures   ; Departures
     EQUS "CRS ", 0          : EQUW crsSearch    ; CRS search
     EQUS "HELP", 0          : EQUW homePage     ; Help
     EQUS "SEARCH ", 0       : EQUW search       ; Search crs by name

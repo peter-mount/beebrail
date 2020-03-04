@@ -42,6 +42,7 @@ func (s *Server) PostInit() error {
 	s.in = bufio.NewReader(port)
 
 	s.refClient = refclient.DarwinRefClient{Url: "https://ref.prod.a51.li"}
+	s.ldbClient = ldbclient.DarwinLDBClient{Url: "https://ldb.prod.a51.li"}
 	return nil
 }
 
@@ -64,6 +65,8 @@ func (s *Server) processCommand() error {
 	switch cmd.Command {
 	case 'C':
 		resp = s.crs(cmd)
+	case 'D':
+		resp = s.departures(cmd)
 	case 'S':
 		resp = s.search(cmd)
 	default:

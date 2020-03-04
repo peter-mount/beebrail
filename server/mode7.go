@@ -89,6 +89,14 @@ func (p *Page) Tab(x, y int) *Page {
 	return p
 }
 
+func (p *Page) X() int {
+	return p.x
+}
+
+func (p *Page) Y() int {
+	return p.y
+}
+
 // Add a new page
 func (r *Pages) AddPage() *Page {
 	p := &Page{
