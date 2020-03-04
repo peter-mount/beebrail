@@ -62,6 +62,12 @@
     BNE vdu23Loop
     RTS
 
+; cls - clears the main screen
+.cls
+    JSR useEntireScreen             ; Use the entire screen (for now)
+    LDA #12
+    JMP oswrch
+
 ; Main home page
 .homePage
     JSR useEntireScreen

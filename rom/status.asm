@@ -1,6 +1,8 @@
 ; General debug code, responds to the STATUS command
 
 .status
+    JSR cls
+
     LDX #<status0
     LDY #>status0
     JSR writeString

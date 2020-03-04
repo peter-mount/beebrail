@@ -228,9 +228,7 @@
 ; For simple responses which are plain text but in BBC format just
 ; Write the received payload direct to the output
 .simpleResult
-    JSR useEntireScreen             ; Use the entire screen (for now)
-    LDA #12
-    JSR oswrch
+    JSR cls
 .simpleResultLoop
     JSR bufferPosSendPosEqual       ; Loop until sendPos hits bufferPos
     BEQ simpleResultEnd             ; Exit once done

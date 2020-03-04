@@ -142,15 +142,8 @@
     EQUS "HELP", 0          : EQUW homePage     ; Help
     EQUS "SEARCH ", 0       : EQUW search       ; Search crs by name
     EQUS "STATUS", 0        : EQUW status       ; Debug status
-    EQUS "REM", 0           : EQUW rem          ; REM
     EQUB &FF                                    ; Table terminator
-
-; REM or remark, does nothing
-.rem
-    RTS
 
     INCLUDE "rom/error.asm"
     INCLUDE "rom/status.asm"
-
-    INCLUDE "rom/crs.asm"
     INCLUDE "rom/search.asm"

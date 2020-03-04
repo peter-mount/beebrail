@@ -1,14 +1,23 @@
 ; ********************************************************************************
-; * search.asm - *SEARCH station name
+; * The basic Mode 7 based commands
 ; ********************************************************************************
+
+; Handles the search by crs code
+.crsSearch
+    LDA #'C'                        ; Command 'C'
+    BRA searchMode7
 
 ; search performs a station name/crs search just like the field on the
 ; departureboards.mobi home page.
-;
-; The returned results are written to the console
-;
 .search
     LDA #'S'                        ; Command 'S' is for search
+; Perform a Mode7 search
+;
+; Entry:
+;   A           Command code to use
+;   inputBuffer containing the search parameter to send
+;
+.searchMode7
     JSR startCommand
     JSR appendInputBuffer           ; Add command line to payload
     JSR sendCommand                 ; Send command
