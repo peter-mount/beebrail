@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"github.com/peter-mount/nre-feeds/ldb"
 	"github.com/peter-mount/nre-feeds/ldb/service"
 	"log"
@@ -49,6 +50,19 @@ func (s *Server) departures(cmd Packet) *Packet {
 			r.AddPage().
 				Tab(0, 4).
 				Append(m.Message)
+		}
+	}
+
+	// Now run through and add page numering if required
+	pageCount := len(r.Pages)
+	if pageCount > 1 {
+		for pn, p := range r.Pages {
+			s := fmt.Sprintf("%d/%d", pn+1, pageCount)
+			log.Println(s)
+			p.Tab(39-len(s), 1).
+				Append(s).
+				Tab(39-len(s), 2).
+				Append(s)
 		}
 	}
 

@@ -24,6 +24,7 @@ curPage         = &0a                   ; The current page in a result set being
 totalPages      = &0b                   ; The number of pages in a result set
 pageStart       = &0c                   ; Start of current page data
 pageEnd         = &0e                   ; End of current page data
+mathTemp        = &10                   ; Temp match space
 tmpaddr         = &70                   ; 2 bytes for (tmpaddr),Y type calls, BASIC friendly
                                         ; 5 bytes when used for OSWORD &00
 

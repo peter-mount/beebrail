@@ -2,6 +2,11 @@
 ; Handles our custom screen
 ; ********************************************************************************
 
+; Use the prompt
+.usePrompt
+    LDA #0:TAX:TAY                  ; Text window to prompt
+    BRA setTextViewPort
+
 ; Use the entire screen
 .useEntireScreen
     LDX #1                  ; Disable cursor
@@ -66,6 +71,15 @@
 .cls
     JSR useEntireScreen             ; Use the entire screen (for now)
     LDA #12
+    JMP oswrch
+
+; tab(x,y)
+.tab
+    LDA #30
+    JSR oswrch
+    TAX
+    JSR oswrch
+    TAY
     JMP oswrch
 
 ; Main home page

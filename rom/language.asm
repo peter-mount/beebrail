@@ -47,8 +47,7 @@
 
 ; cmdLine editor
 .cmdLine
-    LDA #0:TAX:TAY                  ; Text window to prompt
-    JSR setTextViewPort
+    JSR usePrompt
     LDX #<prompt
     LDY #>prompt
     JSR writeString
