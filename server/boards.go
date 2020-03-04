@@ -53,9 +53,11 @@ func (s *Server) departures(cmd Packet) *Packet {
 
 			// Destination
 			dest := s.Destination
+			forecast := l.Forecast.Departure
 			if d, ok := sr.Tiplocs.Get(dest); ok {
 				if d.Crs == crs {
 					dest = "Terminates here"
+					forecast = l.Forecast.Arrival
 				} else {
 					dest = d.Name
 				}
@@ -73,21 +75,24 @@ func (s *Server) departures(cmd Packet) *Packet {
 			var expected string
 			expectedColour := uint8(AlphaGreen)
 			expectedFlash := uint8(' ')
-			d := l.Forecast.Departure
+
 			if l.Forecast.Arrived {
 				expected = "Arrived"
+				expectedColour = AlphaWhite
 			} else if l.Cancelled {
 				expected = "Canc'ld"
 				expectedColour = AlphaRed
-			} else if d.Delayed {
+			} else if forecast.Delayed {
 				expected = "Delayed"
 				expectedColour = AlphaRed
 				expectedFlash = Flash
 			} else if l.Delay == 0 {
 				expected = "On Time"
-			} else if d.ET != nil {
-				expected = d.ET.String()
+			} else if forecast.ET != nil {
+				expected = forecast.ET.String()
 				expected = expected[0:2] + expected[3:5] + " "
+				// TODO if terminates here delay can show wrong as its using WTT not PTT in the calculation
+				//log.Println(forecast.Time(), l.Delay, forecast.ET, l.Times)
 				if l.Delay > 0 {
 					expectedColour = AlphaYellow
 					expectedFlash = Flash
@@ -96,7 +101,11 @@ func (s *Server) departures(cmd Packet) *Packet {
 
 			p := r.CurrentPage
 			for i := 0; i < 2; i++ {
+				if p.Y() >= 22 {
+					p = r.AddPage()
+				}
 				y := p.Y() + 1
+
 				p.Tab(0, y).
 					AppendChars(DoubleHeight, AlphaYellow, ' ').
 					Append(tm).
