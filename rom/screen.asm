@@ -2,6 +2,16 @@
 ; Handles our custom screen
 ; ********************************************************************************
 
+.disableCursor
+    LDX #1                  ; Disable cursor
+    LDY #0
+    JMP vdu23
+
+.enableCursor
+    LDX #1                  ; Enable cursor
+    LDY #1
+    JMP vdu23
+
 ; Use the prompt
 .usePrompt
     LDA #0:TAX:TAY                  ; Text window to prompt
@@ -9,9 +19,7 @@
 
 ; Use the entire screen
 .useEntireScreen
-    LDX #1                  ; Disable cursor
-    LDY #0
-    JSR vdu23
+    JSR disableCursor
 
     LDA #0                  ; Set text window
     LDX #1
@@ -20,10 +28,9 @@
 
 ; Restrict scrolling to the top line
 .useCommandRow
-    LDX #1                  ; Enable cursor
-    LDY #1
-    JSR vdu23
+    JSR enableCursor
 
+.useCommandRowKeepCursorState
     LDA #23                 ; Set text window
     LDX #0
     LDY #0

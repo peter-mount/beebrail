@@ -5,7 +5,17 @@ import (
 	"github.com/peter-mount/nre-feeds/ldb"
 	"github.com/peter-mount/nre-feeds/ldb/service"
 	"log"
+	"strings"
 )
+
+var stripHtml = []string{
+	"<p>", "</p>",
+}
+
+var stripMore = []string{
+	"More detail",
+	"More information",
+}
 
 func (s *Server) departures(cmd Packet) *Packet {
 	crs := cmd.PayloadAsString()
@@ -28,16 +38,20 @@ func (s *Server) departures(cmd Packet) *Packet {
 		stationName = d.Name
 	}
 
+	header := true
 	r := NewResult(func(p *Page) {
 		x := (40 - len(stationName)) >> 1
 		for y := 1; y <= 2; y++ {
 			p.Tab(0, y).
 				AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
 				Tab(x, y).
-				Append(stationName).
-				Tab(0, y+2).
-				AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
-				Append("Due Destination       Plat  Expctd")
+				Append(stationName)
+
+			if header {
+				p.Tab(0, y+2).
+					AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
+					Append("Due Destination       Plat  Expctd")
+			}
 		}
 	})
 
@@ -45,12 +59,54 @@ func (s *Server) departures(cmd Packet) *Packet {
 		processDeparture(crs, sr, s, r)
 	}
 
+	header = false
 	for _, m := range sr.Messages {
-		if m.Active {
-			r.AddPage().
-				Tab(0, 4).
-				Append(m.Message)
+		//if m.Active {
+		s := m.Message
+
+		// Strip out More detail... text
+		for _, v := range stripMore {
+			i := strings.Index(s, v)
+			if i > -1 {
+				s = s[:i]
+			}
 		}
+		for _, v := range stripHtml {
+			s = strings.ReplaceAll(s, v, "")
+		}
+
+		var v []string
+		for len(s) > 37 {
+			j := 37
+			for s[j] != ' ' && j > 0 {
+				j = j - 1
+			}
+			if j <= 0 {
+				// Just split - should never happen
+				v = append(v, s[:37])
+				s = s[37:]
+			} else {
+				v = append(v, s[:j])
+				if (j + 1) >= len(s) {
+					s = ""
+				} else {
+					s = s[j+1:]
+				}
+			}
+		}
+		if s != "" {
+			v = append(v, s)
+		}
+
+		p := r.AddPage()
+		for y, s := range v {
+			for i := 0; i < 2; i++ {
+				p.Tab(0, 5+(2*y)+i).
+					AppendChar(DoubleHeight).
+					Append(s)
+			}
+		}
+		//}
 	}
 
 	// Now run through and add page numering if required
@@ -58,7 +114,6 @@ func (s *Server) departures(cmd Packet) *Packet {
 	if pageCount > 1 {
 		for pn, p := range r.Pages {
 			s := fmt.Sprintf("%d/%d", pn+1, pageCount)
-			log.Println(s)
 			p.Tab(39-len(s), 1).
 				Append(s).
 				Tab(39-len(s), 2).

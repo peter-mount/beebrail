@@ -48,8 +48,8 @@
     JSR appendCommand           ; Append command code
     LDA #0                      ; Append 0 (as this is the status byte)
     JSR appendCommand
-    JSR appendCommandBuffer     ; Skip 2 bytes for the buffer size
-    BRA appendCommandBuffer     ; We'll set these up later
+    JSR incBufferPos            ; Skip 2 bytes for the buffer size
+    BRA incBufferPos            ; We'll set these up later
 
 ; Append a byte to the command Buffer
 ; Entry:
@@ -60,7 +60,8 @@
 ;
 .appendCommand
     STA (bufferPos)             ; Store
-.appendCommandBuffer            ; entry point used to skip in startCommand only
+; increment bufferPos by one
+.incBufferPos
     CLC                         ; Move bufferPos 1 byte
     LDA #1
     ADC bufferPos
@@ -321,7 +322,9 @@
 
 ; rotate pages every 5 seconds
 .rotatePages
-    JSR useCommandRow
+    LDA #12                         ; 12 * 5 = 60 seconds
+    STA reloadCounter
+.rotatePages0
     LDA #&81
     LDX #<500
     LDY #>500
@@ -332,13 +335,15 @@
     JMP errEscape
 
 .rotatePages1
+    DEC reloadCounter
+    BNE rotatePages2
+    RTS
+
+.rotatePages2
     LDA totalPages                  ; just 1 page then do nothing
     CMP #1
-    BEQ rotatePages
+    BEQ rotatePages0
 
-    CLC                             ; cycle to next page
-    LDA curPage
-    ADC #1
-    STA curPage
+    INC curPage                     ; cycle to next page
     JSR displayPage
-    BRA rotatePages
+    BRA rotatePages0

@@ -4,9 +4,31 @@
 
 ; Display departure boards
 .departures
+    LDA inputBuffer,Y               ; Store next 3 chars
+    STA currentStation
+    INY
+    LDA inputBuffer,Y
+    STA currentStation+1
+    INY
+    LDA inputBuffer,Y
+    STA currentStation+2
+    LDA #13                         ; Char 4 is always terminator
+    STA currentStation+3
+.departures0                        ; reload departures using currentStation
+    LDY #3                          ; so copy currentStation into inputBuffer
+    LDX #4
+.departures1
+    LDA currentStation,Y
+    STA inputBuffer,Y
+    DEY
+    DEX
+    BNE departures1
+    LDY #0
+
     LDA #'D'                        ; Command 'D'
     JSR searchMode7
-    JMP rotatePages
+    JSR rotatePages                 ; rotate pages or 60s are up
+    BRA departures0                 ; reload pages
 
 ; Handles the search by crs code
 .crsSearch
@@ -33,6 +55,10 @@
     JSR writeString
 
     JSR sendCommand                 ; Send command
+
+    JSR useCommandRow
+    JSR cls
+
     JMP showResponse                ; Mode7 response
 
 .searchingText
