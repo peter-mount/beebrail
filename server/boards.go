@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+const (
+	// Max pages of departures
+	MAX_PAGES = 5
+)
+
 var stripHtml = []string{
 	"<p>", "</p>",
 }
@@ -55,8 +60,14 @@ func (s *Server) departures(cmd Packet) *Packet {
 		}
 	})
 
+	include := true
 	for _, s := range sr.Services {
-		processDeparture(crs, sr, s, r)
+		if include {
+			processDeparture(crs, sr, s, r)
+			if r.PageCount() > MAX_PAGES {
+				include = false
+			}
+		}
 	}
 
 	header = false
@@ -191,6 +202,10 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, r *P
 	p := r.CurrentPage
 	for i := 0; i < 2; i++ {
 		if p.Y() >= 22 {
+			// If this means we go over the MAX_PAGES count then bail
+			if r.PageCount() >= MAX_PAGES {
+				return
+			}
 			p = r.AddPage()
 		}
 		y := p.Y() + 1

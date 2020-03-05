@@ -139,6 +139,10 @@ func (p *Page) Y() int {
 	return p.y
 }
 
+func (p *Pages) PageCount() int {
+	return len(p.Pages)
+}
+
 // Add a new page
 func (r *Pages) AddPage() *Page {
 	p := &Page{
