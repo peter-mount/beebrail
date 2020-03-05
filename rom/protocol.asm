@@ -329,10 +329,10 @@
     LDX #<500
     LDY #>500
     JSR osbyte
-    BCC rotatePages1
-    CPY #&1B
-    BNE rotatePages1
-    JMP errEscape
+    BCC rotatePages1                ; No error
+    CPY #&1B                        ; Escape?
+    BNE rotatePages1                ; Back to next page
+    BRK:BRK:BRK                     ; Error 0 no message which will then bail to command prompt
 
 .rotatePages1
     DEC reloadCounter
