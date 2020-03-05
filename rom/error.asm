@@ -16,6 +16,7 @@
 
     LDY #0
     LDA (brkAddress),Y              ; error code
+    BEQ errorHandler4
     JSR writeHex
     JSR writeSpace
 .errorHandler3
@@ -28,6 +29,7 @@
     BNE errorHandler0
 .errorHandler1
     JSR osnewl                      ; Force newline
+.errorHandler4
     JMP cmdLine                     ; Back to command prompt
 
 .errEscape
