@@ -14,31 +14,33 @@ import (
 type Config struct {
 	configFile *string // Location of config file
 
-	Serial struct {
-		Port                  string            `yaml:"port"`
-		BaudRate              uint              `yaml:"baud"`
-		DataBits              uint              `yaml:"data"`
-		StopBits              uint              `yaml:"stop"`
-		Parity                serial.ParityMode `yaml:"parity"`
-		FlowControl           bool              `yaml:"flowControl"`
-		InterCharacterTimeout uint              `yaml:"interCharacterTimeout"`
-		MinimumReadSize       uint              `yaml:"minimumReadSize"`
-	} `yaml:"serial"`
+	Serial []SerialConfig `yaml:"serial"` // Direct serial connections
+	Telnet []TelnetConfig `yaml:"telnet"` // Telnet connections
 
-	Telnet struct {
-		Port int `yaml:"port"` // Telnet port
-	} `yaml:"telnet"`
-
-	TelnetSecure struct {
-		Port int    `yaml:"port"` // TelnetS port
+	Tls struct {
 		Cert string `yaml:"cert"` // Cert.pem path
 		Key  string `yaml:"key"`  // Key.pem path
-	} `yaml:"telnets"`
+	}
 
 	Services struct {
 		Reference string `yaml:"reference"` // The ref service url
 		LDB       string `yaml:"ldb"`       // The LDB service url
 	} `yaml:"services"`
+}
+
+type SerialConfig struct {
+	Port        string            `yaml:"port"`
+	BaudRate    uint              `yaml:"baud"`
+	DataBits    uint              `yaml:"data"`
+	StopBits    uint              `yaml:"stop"`
+	Parity      serial.ParityMode `yaml:"parity"`
+	FlowControl bool              `yaml:"flowControl"`
+}
+
+type TelnetConfig struct {
+	Interface string `yaml:"interface"` // Interface "" for any
+	Port      uint16 `yaml:"port"`      // Port
+	Secure    bool   `yaml:"secure"`    // Secure or insecure
 }
 
 func (c *Config) Name() string {

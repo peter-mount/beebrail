@@ -9,3 +9,5 @@ copyright.asm
 .idea
 go.sum
 /dest
+*.pem
+*.key
