@@ -6,23 +6,14 @@ import (
 	"github.com/peter-mount/golib/kernel"
 	refclient "github.com/peter-mount/nre-feeds/darwinref/client"
 	ldbclient "github.com/peter-mount/nre-feeds/ldb/client"
-	"golang.org/x/sync/errgroup"
 	"io"
 	"log"
 )
 
 type Server struct {
-	config     *Config                   // Config file
-	refClient  refclient.DarwinRefClient // ref api
-	ldbClient  ldbclient.DarwinLDBClient // ldb api
-	handlers   []ServerHandler           // slice of handlers
-	serialPort *SerialPort               // serialPort handler
-}
-
-// ServerHandler interface implemented by handlers, e.g. direct Serial port, Telnet etc
-type ServerHandler interface {
-	Start() error
-	Run() error
+	config    *Config                   // Config file
+	refClient refclient.DarwinRefClient // ref api
+	ldbClient ldbclient.DarwinLDBClient // ldb api
 }
 
 func (s *Server) Name() string {
@@ -43,41 +34,7 @@ func (s *Server) PostInit() error {
 	s.refClient = refclient.DarwinRefClient{Url: s.config.Services.Reference}
 	s.ldbClient = ldbclient.DarwinLDBClient{Url: s.config.Services.LDB}
 
-	log.Println(s.config)
-	log.Println(s.config.Serial)
-	log.Println(s.config.Serial.Port)
-	if s.config.Serial.Port != "" {
-		s.handlers = append(s.handlers, s.initSerialPort())
-	}
-
 	return nil
-}
-
-func (s *Server) Start() error {
-
-	// Can't start if we have no handlers
-	if len(s.handlers) == 0 {
-		return errors.New("No interfaces were defined")
-	}
-
-	for _, h := range s.handlers {
-		if err := h.Start(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *Server) Run() error {
-	// Run a Group in JustErrors mode, terminate on the first handler to exit with no error
-	var group errgroup.Group
-
-	for _, h := range s.handlers {
-		group.Go(h.Run)
-	}
-
-	return group.Wait()
 }
 
 // ReadPacket reads a packet from a Reader

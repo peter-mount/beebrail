@@ -1,45 +1,67 @@
-package server
+package _interface
 
 import (
 	"bufio"
 	"github.com/jacobsa/go-serial/serial"
+	"github.com/peter-mount/beebrail/server"
+	"github.com/peter-mount/golib/kernel"
 	"io"
 	"log"
 )
 
 // Handles the serial port option
 type SerialPort struct {
-	server *Server            // the underlying server
+	config *server.Config     // Config file
+	server *server.Server     // the underlying server
 	port   io.ReadWriteCloser // the serial port
 	in     *bufio.Reader      // reader on the port
 }
 
-func (s *Server) initSerialPort() *SerialPort {
-	port := &SerialPort{server: s}
+func (s *SerialPort) Name() string {
+	return "SerialPort"
+}
 
-	c := s.config
+func (s *SerialPort) Init(k *kernel.Kernel) error {
 
-	if c.Serial.BaudRate == 0 {
-		c.Serial.BaudRate = 9600
+	service, err := k.AddService(&server.Config{})
+	if err != nil {
+		return err
+	}
+	s.config = (service).(*server.Config)
+
+	service, err = k.AddService(&server.Server{})
+	if err != nil {
+		return err
+	}
+	s.server = (service).(*server.Server)
+
+	return nil
+}
+
+func (s *SerialPort) PostInit() error {
+	c := s.config.Serial
+
+	if c.BaudRate == 0 {
+		c.BaudRate = 9600
 	}
 
-	if c.Serial.DataBits == 0 {
-		c.Serial.DataBits = 8
-		c.Serial.StopBits = 1
-		c.Serial.MinimumReadSize = 0
+	if c.DataBits == 0 {
+		c.DataBits = 8
+		c.StopBits = 1
+		c.MinimumReadSize = 0
 	}
 
-	if c.Serial.InterCharacterTimeout == 0 {
-		c.Serial.InterCharacterTimeout = 100
+	if c.InterCharacterTimeout == 0 {
+		c.InterCharacterTimeout = 100
 	}
 
-	return port
+	return nil
 }
 
 func (s *SerialPort) Start() error {
 	log.Println("Starting serialPort")
 
-	c := s.server.config.Serial
+	c := s.config.Serial
 	port, err := serial.Open(serial.OpenOptions{
 		PortName:              c.Port,
 		BaudRate:              c.BaudRate,
@@ -57,10 +79,13 @@ func (s *SerialPort) Start() error {
 
 	s.in = bufio.NewReader(port)
 
+	// Start the main thread in a separate goroutine
+	go s.mainThread()
+
 	return nil
 }
 
-func (s *SerialPort) Run() error {
+func (s *SerialPort) mainThread() {
 	for true {
 		packet, err := s.server.ReadPacket(s.in, s.port)
 
@@ -72,6 +97,4 @@ func (s *SerialPort) Run() error {
 			log.Println("Serial", err)
 		}
 	}
-
-	return nil
 }
