@@ -2,63 +2,95 @@ package server
 
 import (
 	"bufio"
-	"github.com/jacobsa/go-serial/serial"
+	"errors"
+	"github.com/peter-mount/golib/kernel"
 	refclient "github.com/peter-mount/nre-feeds/darwinref/client"
 	ldbclient "github.com/peter-mount/nre-feeds/ldb/client"
+	"golang.org/x/sync/errgroup"
 	"io"
 	"log"
 )
 
 type Server struct {
-	port      io.ReadWriteCloser // the serial port
-	in        *bufio.Reader      // reader on the port
-	refClient refclient.DarwinRefClient
-	ldbClient ldbclient.DarwinLDBClient
+	config     *Config                   // Config file
+	refClient  refclient.DarwinRefClient // ref api
+	ldbClient  ldbclient.DarwinLDBClient // ldb api
+	handlers   []ServerHandler           // slice of handlers
+	serialPort *SerialPort               // serialPort handler
+}
+
+// ServerHandler interface implemented by handlers, e.g. direct Serial port, Telnet etc
+type ServerHandler interface {
+	Start() error
+	Run() error
 }
 
 func (s *Server) Name() string {
 	return "Server"
 }
 
-func (s *Server) PostInit() error {
-	log.Println("Starting server")
-
-	options := serial.OpenOptions{
-		PortName:              "/dev/ttyUSB0",
-		BaudRate:              9600,
-		DataBits:              8,
-		StopBits:              1,
-		MinimumReadSize:       0,
-		InterCharacterTimeout: 100,
-		RTSCTSFlowControl:     true,
-	}
-
-	port, err := serial.Open(options)
+func (s *Server) Init(k *kernel.Kernel) error {
+	service, err := k.AddService(&Config{})
 	if err != nil {
 		return err
 	}
-	s.port = port
+	s.config = (service).(*Config)
 
-	s.in = bufio.NewReader(port)
+	return nil
+}
 
-	s.refClient = refclient.DarwinRefClient{Url: "https://ref.prod.a51.li"}
-	s.ldbClient = ldbclient.DarwinLDBClient{Url: "https://ldb.prod.a51.li"}
+func (s *Server) PostInit() error {
+	s.refClient = refclient.DarwinRefClient{Url: s.config.Services.Reference}
+	s.ldbClient = ldbclient.DarwinLDBClient{Url: s.config.Services.LDB}
+
+	log.Println(s.config)
+	log.Println(s.config.Serial)
+	log.Println(s.config.Serial.Port)
+	if s.config.Serial.Port != "" {
+		s.handlers = append(s.handlers, s.initSerialPort())
+	}
+
 	return nil
 }
 
 func (s *Server) Start() error {
 
-	for true {
-		_ = s.processCommand()
+	// Can't start if we have no handlers
+	if len(s.handlers) == 0 {
+		return errors.New("No interfaces were defined")
 	}
+
+	for _, h := range s.handlers {
+		if err := h.Start(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (s *Server) processCommand() error {
-	cmd := Packet{}
-	err := cmd.Read(s.in)
-	if err != nil {
-		return err
+func (s *Server) Run() error {
+	// Run a Group in JustErrors mode, terminate on the first handler to exit with no error
+	var group errgroup.Group
+
+	for _, h := range s.handlers {
+		group.Go(h.Run)
+	}
+
+	return group.Wait()
+}
+
+// ReadPacket reads a packet from a Reader
+func (s *Server) ReadPacket(in *bufio.Reader, out io.Writer) (Packet, error) {
+	cmd := Packet{out: out}
+	err := cmd.Read(in)
+	return cmd, err
+}
+
+// ProcessPacket processes a Packet
+func (s *Server) ProcessPacket(cmd Packet) error {
+	if cmd.out == nil {
+		return errors.New("no response stream")
 	}
 
 	var resp *Packet
@@ -79,5 +111,7 @@ func (s *Server) processCommand() error {
 		resp = cmd.EmptyResponse(0)
 	}
 
-	return resp.Write(s.port)
+	return resp.Write(cmd.out)
 }
+
+type SubService struct{}

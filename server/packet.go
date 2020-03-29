@@ -8,10 +8,11 @@ import (
 
 // Packet represents the actual packet sent over the wire
 type Packet struct {
-	Command byte   // The command code
-	Status  byte   // The status when being returned, optional for commands, e.g. sub-command
-	Length  uint16 // The length of the payload
-	Payload []byte // The payload
+	out     io.Writer // The response writer
+	Command byte      // The command code
+	Status  byte      // The status when being returned, optional for commands, e.g. sub-command
+	Length  uint16    // The length of the payload
+	Payload []byte    // The payload
 }
 
 func (p *Packet) ErrorPacket(err error) *Packet {
