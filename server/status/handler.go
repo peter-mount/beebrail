@@ -37,7 +37,7 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 		"table.tbl th {border-width: 1px;border-style: solid solid solid solid;border-color: gray;}",
 		"th, td {font-size: 10px;}",
 		"table.tbl td {text-align: right;border-width: 1px 1px 1px 1px;border-style: solid solid solid solid;padding: 2px 3px;border-color: gray;white-space: nowrap;}",
-		"table.tbl td.ac {text-align: center;}",
+		"table.tbl td.ac {text-align: left;}",
 		"a.px:visited {color: #ffff40;text-decoration: none;}",
 		"a.px:link {color: #ffff40;text-decoration: none;}",
 		"table.tbl th.empty {border-style: none;empty-cells: hide;background: white;}",
@@ -47,45 +47,25 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 		".backend {background: #e8e8d0;}",
 		"</style>",
 		"</head><body>",
+		"<table class=\"tbl\">",
+		"<tr class=\"titre\">",
+		"<th rowspan=\"2\"></th>",
+		"<th colspan=\"2\">Time</th>",
+		"<th colspan=\"2\">Local</th>",
+		"<th colspan=\"2\">Remote</th>",
+		"</tr>",
+		"<tr class=\"titre\">",
+		"<th>Connected</th><th>Duration</th>",
+		"<th>Interface</th><th>Port</th>",
+		"<th>Interface</th><th>Port</th>",
+		"</tr>",
 	}
 
 	for _, cat := range s.Snapshot().Entries {
-		// Title row for category
-		a = append(a,
-			"<table class=\"tbl\">",
-			"<tr class=\"titre\"><th class=\"pxname\" width=\"20%\">",
-			"<a name=\"", cat.Name, "\"></a>",
-			"<a class=\"px\" href=\"#", cat.Name, "\">", cat.Title, "</a>",
-		)
-
-		if cat.Port > 0 {
-			a = append(a, fmt.Sprintf(" %d", cat.Port))
-		}
-
-		a = append(a,
-			"</th><th class=\"empty\" width=\"80%\"></th>",
-			"</tr>",
-			"</table>",
-		)
-
-		// Now the table containing the connections
-		a = append(a, "<table class=\"tbl\">",
-			"<tr class=\"titre\">",
-			"<th rowspan=\"2\"></th>",
-			"<th colspan=\"2\">Time</th>",
-			"<th colspan=\"2\">Local</th>",
-			"<th colspan=\"2\">Remote</th>",
-			"</tr>",
-			"<tr class=\"titre\">",
-			"<th>Connected</th><th>Duration</th>",
-			"<th>Interface</th><th>Port</th>",
-			"<th>Interface</th><th>Port</th>",
-			"</tr>",
-		)
 		for _, con := range cat.Entries {
 			a = append(a, "<tr class=\"active_up\"><td class=\"ac\">")
 			if con.Name == "" {
-				a = append(a, fmt.Sprintf("connection%d", con.ID))
+				a = append(a, fmt.Sprintf("%s %d", cat.Title, con.ID))
 			} else {
 				a = append(a, con.Name)
 			}
@@ -103,10 +83,6 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 			a = con.Remote.Append(a)
 			a = append(a, "</tr>")
 		}
-		a = append(a, "</table>")
-
-		// Category separator
-		a = append(a, "<p></p>")
 	}
 
 	a = append(a,
