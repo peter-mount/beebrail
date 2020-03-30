@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/peter-mount/beebrail/server/status"
 	"github.com/peter-mount/beebrail/server/util"
 	"io"
 )
@@ -36,6 +37,11 @@ func (r *ShellRequest) Printf(f string, v ...interface{}) *ShellRequest {
 func (r *ShellRequest) Println(v ...interface{}) *ShellRequest {
 	_, _ = fmt.Fprintln(r.Stdout, v...)
 	return r
+}
+
+// convenience method to get the Connection
+func (r *ShellRequest) Connection() *status.Connection {
+	return (r.Get(KEY_CONNECTION)).(*status.Connection)
 }
 
 // convenience method to get the current TableStyle

@@ -5,7 +5,6 @@ import (
 	"github.com/peter-mount/beebrail/server/util"
 	"github.com/peter-mount/nre-feeds/ldb"
 	"github.com/peter-mount/nre-feeds/ldb/service"
-	"log"
 	"strings"
 )
 
@@ -29,7 +28,7 @@ func (s *Server) departures(r *ShellRequest) error {
 	}
 	crs := strings.ToUpper(r.Args[0])
 
-	log.Println("Departures", crs)
+	r.Connection().Println("Departures", crs)
 
 	sr, err := s.ldbClient.GetSchedule(crs)
 	if err != nil {

@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"log"
 )
 
 func (s *Server) search(r *ShellRequest) error {
@@ -11,7 +10,7 @@ func (s *Server) search(r *ShellRequest) error {
 	}
 	param := r.Args[0]
 
-	log.Println("Search", param)
+	r.Connection().Println("Search", param)
 
 	if len(param) < 3 {
 		return errors.New("Search requires minimum 3 characters")

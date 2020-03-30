@@ -106,7 +106,7 @@ func (c *Category) Add(local, remote net.Addr) *Connection {
 		}
 		c.connections[con.ID] = con
 
-		log.Println("Add", c.Name, con.ID)
+		con.Printf("Connected %s:%d", con.Remote.Interface, con.Remote.Port)
 
 		return nil
 	})
@@ -119,7 +119,7 @@ func (con *Connection) Remove() {
 	if con != nil && con.cat != nil {
 		_ = con.cat.s.Invoke(func() error {
 			delete(con.cat.connections, con.ID)
-			log.Println("Rem", con.cat.Name, con.ID)
+			con.Printf("Disconnected %s:%d", con.Remote.Interface, con.Remote.Port)
 			con.cat = nil
 			return nil
 		})
@@ -152,4 +152,16 @@ func (con *Connection) BytesOut(n int) {
 
 		return nil
 	})
+}
+
+func (con *Connection) Println(a ...interface{}) {
+	ary := []interface{}{con.ID}
+	ary = append(ary, a...)
+	log.Println(ary...)
+}
+
+func (con *Connection) Printf(f string, a ...interface{}) {
+	ary := []interface{}{con.ID}
+	ary = append(ary, a...)
+	log.Printf("%d "+f, ary...)
 }

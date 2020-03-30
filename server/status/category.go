@@ -1,7 +1,6 @@
 package status
 
 import (
-	"log"
 	"sort"
 	"time"
 )
@@ -52,7 +51,6 @@ func (s *Status) AddCategory(name, title string) *Category {
 			}
 
 			s.categories[name] = cat
-			log.Println("Adding status category", name, title)
 		}
 
 		return nil

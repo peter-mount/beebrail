@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"log"
 	"strings"
 )
 
@@ -12,7 +11,7 @@ func (s *Server) Crs(r *ShellRequest) error {
 	}
 	crs := strings.ToUpper(r.Args[0])
 
-	log.Println("CRS", crs)
+	r.Connection().Println("CRS", crs)
 
 	response, err := s.refClient.GetCrs(crs)
 	if err != nil {
