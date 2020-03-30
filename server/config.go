@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"flag"
-	"github.com/jacobsa/go-serial/serial"
 	"github.com/peter-mount/golib/kernel"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -14,7 +13,6 @@ import (
 type Config struct {
 	configFile *string // Location of config file
 
-	Serial []SerialConfig `yaml:"serial"` // Direct serial connections
 	Telnet []TelnetConfig `yaml:"telnet"` // Telnet connections
 
 	Tls struct {
@@ -32,16 +30,6 @@ type Config struct {
 		WelcomeMessage string `yaml:"welcomeMessage"` // Welcome message
 		ExitMessage    string `yaml:"exitMessage"`    // Exit message
 	}
-}
-
-type SerialConfig struct {
-	Device      string            `yaml:"device"`
-	Port        string            `yaml:"port"`
-	BaudRate    uint              `yaml:"baud"`
-	DataBits    uint              `yaml:"data"`
-	StopBits    uint              `yaml:"stop"`
-	Parity      serial.ParityMode `yaml:"parity"`
-	FlowControl bool              `yaml:"flowControl"`
 }
 
 type TelnetConfig struct {

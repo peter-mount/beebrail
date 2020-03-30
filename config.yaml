@@ -1,0 +1,27 @@
+# URL's of the various nre-feeds API's
+services:
+  reference: https://ref.prod.a51.li
+  ldb: https://ldb.prod.a51.li
+
+# TLS details, only needed when using telnet-ssl
+tls:
+# Certificate path
+#  cert: /path/to/ssl-cert-snakeoil.pem
+# Private key
+#  key: /path/to/ssl-cert-snakeoil.key
+
+# The shell environment
+shell:
+  # Command prompt
+  prompt: ">"
+  # Message sent on initial login
+  welcomeMessage: "\r\n\nWelcome to departureboards.mobi\r\n\n"
+  # Message sent on logoff
+  exitMessage: "Goodbye\r\n\n"
+
+# List of telnet ports to open
+telnet:
+  - # The port to listen to
+    port: 8081
+    # true use telnet-ssl or plain telnet
+    secure: false
