@@ -74,7 +74,7 @@ var MODE7 = TableSyle{
 }
 
 func (t *TableSyle) WriteCSep(o io.Writer) error {
-	if t != nil {
+	if t != nil && t.Border {
 		err := write(o, t.CSep)
 		if err != nil {
 			return err
@@ -153,7 +153,7 @@ func (t *TableSyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
 
 func (t *TableSyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) error {
 	if i > 0 {
-		err := t.WriteCSep(o)
+		err := write(o, t.CSep)
 		if err != nil {
 			return err
 		}

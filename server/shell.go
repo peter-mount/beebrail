@@ -11,6 +11,8 @@ func NewShell(s *Server) *telsh.ShellHandler {
 	h.ExitMessage = s.config.Shell.ExitMessage
 
 	RegisterShellCommand(h, "crs", s.Crs)
+	RegisterShellCommand(h, "depart", s.departures)
+	RegisterShellCommand(h, "search", s.search)
 
 	return h
 }

@@ -1,7 +1,8 @@
 package server
 
 import (
-	"fmt"
+	"errors"
+	"github.com/peter-mount/beebrail/server/util"
 	"github.com/peter-mount/nre-feeds/ldb"
 	"github.com/peter-mount/nre-feeds/ldb/service"
 	"log"
@@ -22,15 +23,17 @@ var stripMore = []string{
 	"More information",
 }
 
-func (s *Server) departures(cmd Packet) *Packet {
-	crs := cmd.PayloadAsString()
+func (s *Server) departures(r *ShellRequest) error {
+	if len(r.Args) != 1 {
+		return errors.New("Syntax: depart code")
+	}
+	crs := strings.ToUpper(r.Args[0])
 
 	log.Println("Departures", crs)
 
 	sr, err := s.ldbClient.GetSchedule(crs)
 	if err != nil {
-		log.Println(err)
-		return cmd.ErrorPacket(err)
+		return err
 	}
 
 	var stationName string
@@ -43,99 +46,116 @@ func (s *Server) departures(cmd Packet) *Packet {
 		stationName = d.Name
 	}
 
-	header := true
-	r := NewResult(func(p *Page) {
-		x := (40 - len(stationName)) >> 1
-		for y := 1; y <= 2; y++ {
-			p.Tab(0, y).
-				AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
-				Tab(x, y).
-				Append(stationName)
-
-			if header {
-				p.Tab(0, y+2).
-					AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
-					Append("Due Destination       Plat  Expctd")
-			}
-		}
-	})
+	t := &util.Table{
+		Title: "CRS " + crs,
+		Style: util.Plain,
+	}
+	t.AddHeaders("Due", "Destination", "Plat", "Expcted")
 
 	include := true
 	for _, s := range sr.Services {
 		if include {
-			processDeparture(crs, sr, s, r)
-			if r.PageCount() > MAX_PAGES {
-				include = false
-			}
+			processDeparture(crs, sr, s, t)
 		}
 	}
 
-	header = false
-	for _, m := range sr.Messages {
-		//if m.Active {
-		s := m.Message
+	/*
+		header := true
+		r := NewResult(func(p *Page) {
+			x := (40 - len(stationName)) >> 1
+			for y := 1; y <= 2; y++ {
+				p.Tab(0, y).
+					AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
+					Tab(x, y).
+					Append(stationName)
 
-		// Strip out More detail... text
-		for _, v := range stripMore {
-			i := strings.Index(s, v)
-			if i > -1 {
-				s = s[:i]
+				if header {
+					p.Tab(0, y+2).
+						AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
+						Append("Due Destination       Plat  Expctd")
+				}
 			}
-		}
-		for _, v := range stripHtml {
-			s = strings.ReplaceAll(s, v, "")
-		}
+		})
 
-		var v []string
-		for len(s) > 37 {
-			j := 37
-			for s[j] != ' ' && j > 0 {
-				j = j - 1
-			}
-			if j <= 0 {
-				// Just split - should never happen
-				v = append(v, s[:37])
-				s = s[37:]
-			} else {
-				v = append(v, s[:j])
-				if (j + 1) >= len(s) {
-					s = ""
-				} else {
-					s = s[j+1:]
+		include := true
+		for _, s := range sr.Services {
+			if include {
+				processDeparture(crs, sr, s, r)
+				if r.PageCount() > MAX_PAGES {
+					include = false
 				}
 			}
 		}
-		if s != "" {
-			v = append(v, s)
+
+		header = false
+		for _, m := range sr.Messages {
+			//if m.Active {
+			s := m.Message
+
+			// Strip out More detail... text
+			for _, v := range stripMore {
+				i := strings.Index(s, v)
+				if i > -1 {
+					s = s[:i]
+				}
+			}
+			for _, v := range stripHtml {
+				s = strings.ReplaceAll(s, v, "")
+			}
+
+			var v []string
+			for len(s) > 37 {
+				j := 37
+				for s[j] != ' ' && j > 0 {
+					j = j - 1
+				}
+				if j <= 0 {
+					// Just split - should never happen
+					v = append(v, s[:37])
+					s = s[37:]
+				} else {
+					v = append(v, s[:j])
+					if (j + 1) >= len(s) {
+						s = ""
+					} else {
+						s = s[j+1:]
+					}
+				}
+			}
+			if s != "" {
+				v = append(v, s)
+			}
+
+			p := r.AddPage()
+			for y, s := range v {
+				for i := 0; i < 2; i++ {
+					p.Tab(0, 5+(2*y)+i).
+						AppendChar(DoubleHeight).
+						Append(s)
+				}
+			}
+			//}
 		}
 
-		p := r.AddPage()
-		for y, s := range v {
-			for i := 0; i < 2; i++ {
-				p.Tab(0, 5+(2*y)+i).
-					AppendChar(DoubleHeight).
+		// Now run through and add page numering if required
+		pageCount := len(r.Pages)
+		if pageCount > 1 {
+			for pn, p := range r.Pages {
+				s := fmt.Sprintf("%d/%d", pn+1, pageCount)
+				p.Tab(39-len(s), 1).
+					Append(s).
+					Tab(39-len(s), 2).
 					Append(s)
 			}
 		}
-		//}
-	}
 
-	// Now run through and add page numering if required
-	pageCount := len(r.Pages)
-	if pageCount > 1 {
-		for pn, p := range r.Pages {
-			s := fmt.Sprintf("%d/%d", pn+1, pageCount)
-			p.Tab(39-len(s), 1).
-				Append(s).
-				Tab(39-len(s), 2).
-				Append(s)
-		}
-	}
+		return cmd.EmptyResponse(0).AppendPages(r)
+	*/
 
-	return cmd.EmptyResponse(0).AppendPages(r)
+	return t.Write(r.Stdout)
 }
 
-func processDeparture(crs string, sr *service.StationResult, s ldb.Service, r *Pages) {
+func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *util.Table) {
 	if s.Location.Forecast.Suppressed {
 		return
 	}
@@ -171,21 +191,21 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, r *P
 	}
 
 	var expected string
-	expectedColour := uint8(AlphaGreen)
-	expectedFlash := uint8(' ')
+	//expectedColour := uint8(AlphaGreen)
+	//expectedFlash := uint8(' ')
 
 	forecast := l.Forecast.Departure
 
 	if l.Forecast.Arrived {
 		expected = "Arrived"
-		expectedColour = AlphaWhite
+		//expectedColour = AlphaWhite
 	} else if l.Cancelled {
 		expected = "Canc'ld"
-		expectedColour = AlphaRed
+		//expectedColour = AlphaRed
 	} else if forecast.Delayed {
 		expected = "Delayed"
-		expectedColour = AlphaRed
-		expectedFlash = Flash
+		//expectedColour = AlphaRed
+		//expectedFlash = Flash
 	} else if l.Delay == 0 {
 		expected = "On Time"
 	} else if forecast.ET != nil {
@@ -193,33 +213,41 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, r *P
 		expected = expected[0:2] + expected[3:5] + " "
 		// TODO if terminates here delay can show wrong as its using WTT not PTT in the calculation
 		//log.Println(forecast.Time(), l.Delay, forecast.ET, l.Times)
-		if l.Delay > 0 {
-			expectedColour = AlphaYellow
-			expectedFlash = Flash
-		}
+		//if l.Delay > 0 {
+		//  expectedColour = AlphaYellow
+		//  expectedFlash = Flash
+		//}
 	}
 
-	p := r.CurrentPage
-	for i := 0; i < 2; i++ {
-		if p.Y() >= 22 {
-			// If this means we go over the MAX_PAGES count then bail
-			if r.PageCount() >= MAX_PAGES {
-				return
+	t.NewRow().
+		Append(tm).
+		Append(dest).
+		Append(plat).
+		Append(expected)
+
+	/*
+		p := r.CurrentPage
+		for i := 0; i < 2; i++ {
+			if p.Y() >= 22 {
+				// If this means we go over the MAX_PAGES count then bail
+				if r.PageCount() >= MAX_PAGES {
+					return
+				}
+				p = r.AddPage()
 			}
-			p = r.AddPage()
-		}
-		y := p.Y() + 1
+			y := p.Y() + 1
 
-		p.Tab(0, y).
-			AppendChars(DoubleHeight, AlphaYellow, ' ').
-			Append(tm).
-			AppendChar(AlphaWhite).
-			Append(dest).
-			Tab(24+5-len(plat), y).
-			AppendChar(AlphaYellow).
-			Append(plat).
-			Tab(37-len(expected), y).
-			AppendChars(expectedFlash, expectedColour).
-			Append(expected)
-	}
+			p.Tab(0, y).
+				AppendChars(DoubleHeight, AlphaYellow, ' ').
+				Append(tm).
+				AppendChar(AlphaWhite).
+				Append(dest).
+				Tab(24+5-len(plat), y).
+				AppendChar(AlphaYellow).
+				Append(plat).
+				Tab(37-len(expected), y).
+				AppendChars(expectedFlash, expectedColour).
+				Append(expected)
+		}
+	*/
 }
