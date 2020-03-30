@@ -12,12 +12,13 @@ import (
 // Connection
 type Connection struct {
 	cat      *Category     // Link to underlying category
-	ID       int           `json:"id" xml:"id,attr"`        // The connection id
-	Name     string        `json:"name" xml:"name,attr"`    // Name of connection, e.g. Serial port or IP address
-	Local    Addr          `json:"local" xml:"local"`       // Local network port
-	Remote   Addr          `json:"remote" xml:"remote"`     // Remote network port
-	Time     time.Time     `json:"time" xml:"time,attr"`    // When the connection was made
-	Duration time.Duration `json:"duration" xml:"duration"` // How long the connecton has been running
+	ID       int           `json:"id" xml:"id,attr"`         // The connection id
+	Name     string        `json:"name" xml:"name,attr"`     // Name of connection, e.g. Serial port or IP address
+	Local    Addr          `json:"local" xml:"local"`        // Local network port
+	Remote   Addr          `json:"remote" xml:"remote"`      // Remote network port
+	Secure   bool          `json:"secure" xml:"secure,attr"` // Secure connection
+	Time     time.Time     `json:"time" xml:"time,attr"`     // When the connection was made
+	Duration time.Duration `json:"duration" xml:"duration"`  // How long the connecton has been running
 }
 
 // A network address

@@ -5,9 +5,11 @@ import (
 	"github.com/jacobsa/go-serial/serial"
 	"github.com/peter-mount/beebrail/server"
 	"github.com/peter-mount/beebrail/server/status"
+	"github.com/peter-mount/go-telnet"
 	"github.com/peter-mount/golib/kernel"
 	"io"
 	"log"
+	"time"
 )
 
 // Handles the serial port option
@@ -22,7 +24,6 @@ type SerialPort struct {
 type serialConnection struct {
 	parent *SerialPort         // pointer to parent
 	config server.SerialConfig // Config for this instance
-	conn   *status.Connection  // Status connection
 	port   io.ReadWriteCloser  // the serial port
 	in     *bufio.Reader       // reader on the port
 }
@@ -50,6 +51,9 @@ func (s *SerialPort) Init(k *kernel.Kernel) error {
 		return err
 	}
 	s.stats = (service).(*status.Status)
+
+	// Dependency is only to start after telnet
+	_, err = k.AddService(&Telnet{})
 
 	return nil
 }
@@ -89,7 +93,7 @@ func (s *SerialPort) Start() error {
 
 func (s *serialConnection) start() error {
 	port, err := serial.Open(serial.OpenOptions{
-		PortName:              s.config.Port,
+		PortName:              s.config.Device,
 		BaudRate:              s.config.BaudRate,
 		DataBits:              s.config.DataBits,
 		StopBits:              s.config.StopBits,
@@ -103,7 +107,7 @@ func (s *serialConnection) start() error {
 	}
 
 	s.port = port
-	s.in = bufio.NewReader(port)
+	//s.in = bufio.NewReader(port)
 
 	go s.run()
 
@@ -114,21 +118,43 @@ func (s *serialConnection) run() {
 	// On exit close the port
 	defer s.port.Close()
 
-	// Register the connection in stats
-	s.conn = s.parent.cat.Add(nil, nil)
-	s.conn.Name = s.config.Port
+	err := telnet.DialToAndCall(s.config.Port, s)
+	if err != nil {
+		log.Println("Serial", err)
+	}
+}
 
-	defer s.conn.Remove()
+func (s *serialConnection) CallTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
+	conn := s.parent.cat.Add(ctx.LocalAddr(), ctx.RemoteAddr())
+	conn.Name = s.config.Device
+	defer conn.Remove()
 
-	for true {
-		packet, err := s.parent.server.ReadPacket(s.in, s.port)
+	_, _ = s.port.Write([]byte{0xFF, 0xFB, 0x01}) // IAC WILL ECHO
 
-		if err == nil {
-			err = s.parent.server.ProcessPacket(packet)
-		}
+	go pipe(s.port, r)
+	pipe(w, s.port)
 
+	// Wait a bit to receive data from the server (that we would send to io.Stdout).
+	time.Sleep(3 * time.Millisecond)
+}
+
+func pipe(w io.Writer, r io.Reader) {
+
+	// Seems like the length of the buffer needs to be small, otherwise will have to wait for buffer to fill up.
+	var buffer [1]byte
+	p := buffer[:]
+
+	for {
+		// Read 1 byte.
+		n, err := r.Read(p)
 		if err != nil && err != io.EOF {
-			log.Println("Serial", err)
+			break
+		} else if n > 0 {
+			_, _ = w.Write(p)
+		} else {
+			// Wait a short while to allow some input to arrive
+			time.Sleep(3 * time.Millisecond)
 		}
 	}
+
 }

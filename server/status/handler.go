@@ -46,6 +46,7 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 		".active_down {background: #ff9090;}",
 		".backend {background: #e8e8d0;}",
 		"</style>",
+		"<meta http-equiv=\"refresh\" content=\"10\"/>",
 		"</head><body>",
 		"<table class=\"tbl\">",
 		"<tr class=\"titre\">",
@@ -53,6 +54,7 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 		"<th colspan=\"2\">Time</th>",
 		"<th colspan=\"2\">Local</th>",
 		"<th colspan=\"2\">Remote</th>",
+		"<th rowspan=\"2\">Secure</th>",
 		"</tr>",
 		"<tr class=\"titre\">",
 		"<th>Connected</th><th>Duration</th>",
@@ -81,9 +83,26 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 
 			a = con.Local.Append(a)
 			a = con.Remote.Append(a)
+			a = append(a, fmt.Sprintf(
+				"<td>%v</td>",
+				con.Secure,
+			))
 			a = append(a, "</tr>")
 		}
 	}
+
+	// Status line
+	a = append(a,
+		"<tr class=\"backend\"><td class=\"ac\">Backend</td>",
+		"<td>", s.started.Format(time.RFC3339), "</td>",
+		"<td>", time.Now().UTC().Sub(s.started).Truncate(time.Second).String(), "</td>",
+		"<td></td>",
+		"<td></td>",
+		"<td></td>",
+		"<td></td>",
+		"<td></td>",
+		"</tr>",
+	)
 
 	a = append(a,
 		"</table>",

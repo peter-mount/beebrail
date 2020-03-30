@@ -26,9 +26,16 @@ type Config struct {
 		Reference string `yaml:"reference"` // The ref service url
 		LDB       string `yaml:"ldb"`       // The LDB service url
 	} `yaml:"services"`
+
+	Shell struct {
+		Prompt         string `yaml:"prompt"`         // Command prompt
+		WelcomeMessage string `yaml:"welcomeMessage"` // Welcome message
+		ExitMessage    string `yaml:"exitMessage"`    // Exit message
+	}
 }
 
 type SerialConfig struct {
+	Device      string            `yaml:"device"`
 	Port        string            `yaml:"port"`
 	BaudRate    uint              `yaml:"baud"`
 	DataBits    uint              `yaml:"data"`

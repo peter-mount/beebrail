@@ -52,8 +52,8 @@ func (s *Server) ProcessPacket(cmd Packet) error {
 
 	var resp *Packet
 	switch cmd.Command {
-	case 'C':
-		resp = s.crs(cmd)
+	//case 'C':
+	//resp = s.crs(cmd)
 	case 'D':
 		resp = s.departures(cmd)
 	case 'S':

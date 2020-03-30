@@ -8,10 +8,7 @@ import (
 	"github.com/peter-mount/go-telnet"
 	"github.com/peter-mount/go-telnet/telsh"
 	"github.com/peter-mount/golib/kernel"
-	"github.com/reiver/go-oi"
-	"io"
 	"log"
-	"time"
 )
 
 type Telnet struct {
@@ -90,8 +87,7 @@ func (t *Telnet) Start() error {
 func (tc *telnetConnection) start() {
 	var err error
 	port := fmt.Sprintf("%s:%d", tc.config.Interface, tc.config.Port)
-	tc.handler = telsh.NewShellHandler()
-	tc.handler.Register("test", animateProducer)
+	tc.handler = server.NewShell(tc.parent.server)
 
 	log.Println("Starting telnet", port, "secure", tc.config.Secure)
 	if tc.config.Secure {
@@ -112,47 +108,3 @@ func (tc *telnetConnection) ServeTELNET(ctx telnet.Context, w telnet.Writer, r t
 
 	tc.handler.ServeTELNET(ctx, w, r)
 }
-
-func animateHandler(stdin io.ReadCloser, stdout io.WriteCloser, stderr io.WriteCloser, args ...string) error {
-
-	for i := 0; i < 20; i++ {
-		oi.LongWriteString(stdout, "\r⠋")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠙")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠹")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠸")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠼")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠴")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠦")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠧")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠇")
-		time.Sleep(50 * time.Millisecond)
-
-		oi.LongWriteString(stdout, "\r⠏")
-		time.Sleep(50 * time.Millisecond)
-	}
-	oi.LongWriteString(stdout, "\r \r\n")
-
-	return nil
-}
-
-func animateProducerFunc(ctx telnet.Context, name string, args ...string) telsh.Handler {
-	return telsh.PromoteHandlerFunc(animateHandler)
-}
-
-var animateProducer = telsh.ProducerFunc(animateProducerFunc)

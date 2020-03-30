@@ -6,6 +6,7 @@ import (
 	"github.com/peter-mount/sortfold"
 	"sort"
 	"sync"
+	"time"
 )
 
 // Status presents a JSON/HTML endpoint which we can use to provide monitoring of the service
@@ -13,6 +14,7 @@ type Status struct {
 	mutex       sync.Mutex           // Mutex to allow concurrent access
 	restService *rest.Server         // Rest http server
 	categories  map[string]*Category // map of categories by name
+	started     time.Time            // Time started
 }
 
 func (s *Status) Name() string {
@@ -32,6 +34,8 @@ func (s *Status) Init(k *kernel.Kernel) error {
 }
 
 func (s *Status) PostInit() error {
+	s.started = time.Now().UTC()
+
 	s.restService.Handle("/status.json", s.jsonHandler)
 	s.restService.Handle("/status.xml", s.xmlHandler)
 	s.restService.Handle("/", s.htmlHandler)
