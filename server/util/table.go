@@ -7,10 +7,10 @@ import (
 
 // Table of results
 type Table struct {
-	Title   string    // Table title (optional)
-	Style   TableSyle // Style of table
-	Headers []*Header // Column headers
-	Rows    []*Row    // Response rows
+	Title   string     // Table title (optional)
+	Style   TableStyle // Style of table
+	Headers []*Header  // Column headers
+	Rows    []*Row     // Response rows
 }
 
 // Table Header
@@ -38,7 +38,7 @@ const (
 )
 
 // Table styling
-type TableSyle struct {
+type TableStyle struct {
 	ShowTitle  bool // Show table title
 	HSep       byte // Char separating columns in row separator
 	HLine      byte // Char forming row separator
@@ -52,7 +52,7 @@ type TableSyle struct {
 }
 
 // Plain Table Style
-var Plain = TableSyle{
+var Plain = TableStyle{
 	HSep:   '=',
 	HLine:  '=',
 	CSep:   ' ',
@@ -60,7 +60,7 @@ var Plain = TableSyle{
 }
 
 // SQL Table Style
-var SQL = TableSyle{
+var SQL = TableStyle{
 	HSep:   '+',
 	HLine:  '-',
 	CSep:   '|',
@@ -68,7 +68,7 @@ var SQL = TableSyle{
 }
 
 // BBC Mode 8 - i.e. for the BBC Master 128 ROM
-var MODE7 = TableSyle{
+var MODE7 = TableStyle{
 	ShowTitle:  true,  // Show table title
 	HSep:       0,     // no separator
 	HLine:      0,     // no separator
@@ -81,7 +81,7 @@ var MODE7 = TableSyle{
 	EOT:        4,     // ASCII code
 }
 
-func (t *TableSyle) WriteCSep(o io.Writer) error {
+func (t *TableStyle) WriteCSep(o io.Writer) error {
 	if t != nil && t.Border {
 		err := write(o, t.CSep)
 		if err != nil {
@@ -91,7 +91,7 @@ func (t *TableSyle) WriteCSep(o io.Writer) error {
 	return nil
 }
 
-func (t *TableSyle) WriteHSep(o io.Writer) error {
+func (t *TableStyle) WriteHSep(o io.Writer) error {
 	if t != nil && t.Border {
 		err := write(o, t.HSep)
 		if err != nil {
@@ -101,14 +101,14 @@ func (t *TableSyle) WriteHSep(o io.Writer) error {
 	return nil
 }
 
-func (t *TableSyle) WriteBorder(o io.Writer, tab *Table) error {
+func (t *TableStyle) WriteBorder(o io.Writer, tab *Table) error {
 	if t.Border {
 		return t.WriteSeparator(o, tab)
 	}
 	return nil
 }
 
-func (t *TableSyle) WriteSeparator(o io.Writer, tab *Table) error {
+func (t *TableStyle) WriteSeparator(o io.Writer, tab *Table) error {
 	err := t.WriteHSep(o)
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (t *TableSyle) WriteSeparator(o io.Writer, tab *Table) error {
 	return write(o, '\n')
 }
 
-func (t *TableSyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
+func (t *TableStyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
 	err := t.WriteCSep(o)
 	if err != nil {
 		return err
@@ -159,7 +159,7 @@ func (t *TableSyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
 	return write(o, '\n')
 }
 
-func (t *TableSyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) error {
+func (t *TableStyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) error {
 	if i > 0 {
 		err := write(o, t.CSep)
 		if err != nil {
