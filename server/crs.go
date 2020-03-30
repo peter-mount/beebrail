@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"github.com/peter-mount/beebrail/server/util"
 	"log"
 	"strings"
 )
@@ -20,10 +19,7 @@ func (s *Server) Crs(r *ShellRequest) error {
 		return err
 	}
 
-	t := util.Table{
-		Title: "CRS " + crs,
-		Style: util.Plain,
-	}
+	t := r.NewTable("CRS " + crs)
 	t.AddHeaders("CRS", "Tiploc", "Toc", "Name")
 
 	if response != nil {

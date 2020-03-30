@@ -35,12 +35,14 @@ const (
 	ReleaseGraphics
 )
 
+/*
 // Pages is a collection of Mode7 Pages containing results
 type Pages struct {
 	Pages       []*Page     // The list of pages
 	CurrentPage *Page       // The current page
 	newpage     func(*Page) // hook called when a new page is added - think headers
 }
+
 
 func (p *Packet) AppendPages(r *Pages) *Packet {
 
@@ -198,6 +200,7 @@ func (p *Page) Newline() *Page {
 	}
 	return p
 }
+*/
 
 // GraphChar returns the graphics character for a 6 bit pattern.
 //

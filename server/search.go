@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"github.com/peter-mount/beebrail/server/util"
 	"log"
 )
 
@@ -23,10 +22,7 @@ func (s *Server) search(r *ShellRequest) error {
 		return err
 	}
 
-	t := util.Table{
-		Title: "Search results",
-		Style: util.Plain,
-	}
+	t := r.NewTable("Search results")
 	t.AddHeaders("CRS", "Station")
 
 	for _, res := range results {

@@ -12,6 +12,7 @@ func NewShell(s *Server) *telsh.ShellHandler {
 
 	RegisterShellCommand(h, "crs", s.Crs)
 	RegisterShellCommand(h, "depart", s.departures)
+	RegisterShellCommand(h, "mode", s.mode)
 	RegisterShellCommand(h, "search", s.search)
 
 	return h

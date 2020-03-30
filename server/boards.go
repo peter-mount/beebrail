@@ -46,10 +46,7 @@ func (s *Server) departures(r *ShellRequest) error {
 		stationName = d.Name
 	}
 
-	t := &util.Table{
-		Title: "CRS " + crs,
-		Style: util.Plain,
-	}
+	t := r.NewTable("CRS " + crs)
 	t.AddHeaders("Due", "Destination", "Plat", "Expcted")
 
 	include := true

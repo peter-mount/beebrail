@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/peter-mount/beebrail/server/status"
+	"github.com/peter-mount/beebrail/server/util"
 	"github.com/peter-mount/go-telnet"
 	"github.com/peter-mount/go-telnet/telsh"
 	"github.com/peter-mount/golib/kernel"
@@ -100,6 +101,11 @@ func (tc *telnetConnection) ServeTELNET(ctx telnet.Context, w telnet.Writer, r t
 
 	con := tc.cat.Add(ctx.LocalAddr(), ctx.RemoteAddr())
 	defer con.Remove()
+
+	// Default settings
+	m := *ctx.UserData()
+	m[KEY_CONNECTION] = con
+	m[KEY_TABLESTYLE] = util.Plain
 
 	wrapper := &telnetWrapper{
 		reader: r,
