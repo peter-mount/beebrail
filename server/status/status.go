@@ -42,8 +42,8 @@ func (s *Status) PostInit() error {
 	return nil
 }
 
-// invoke invokes a function within our mutex
-func (s *Status) invoke(f func() error) error {
+// Invoke invokes a function within our mutex
+func (s *Status) Invoke(f func() error) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return f()
@@ -53,7 +53,7 @@ func (s *Status) invoke(f func() error) error {
 func (s *Status) ForEach(f func(category *Category) error) error {
 	// Sorted list of categories by Title
 	var cats []*Category
-	_ = s.invoke(func() error {
+	_ = s.Invoke(func() error {
 		for _, cat := range s.categories {
 			cats = append(cats, cat)
 		}

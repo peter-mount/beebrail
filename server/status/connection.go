@@ -11,14 +11,13 @@ import (
 
 // Connection
 type Connection struct {
-	cat      *Category     // Link to underlying category
-	ID       int           `json:"id" xml:"id,attr"`         // The connection id
-	Name     string        `json:"name" xml:"name,attr"`     // Name of connection, e.g. Serial port or IP address
-	Local    Addr          `json:"local" xml:"local"`        // Local network port
-	Remote   Addr          `json:"remote" xml:"remote"`      // Remote network port
-	Secure   bool          `json:"secure" xml:"secure,attr"` // Secure connection
-	Time     time.Time     `json:"time" xml:"time,attr"`     // When the connection was made
-	Duration time.Duration `json:"duration" xml:"duration"`  // How long the connecton has been running
+	cat    *Category // Link to underlying category
+	ID     int       `json:"id" xml:"id,attr"`         // The connection id
+	Name   string    `json:"name" xml:"name,attr"`     // Name of connection, e.g. Serial port or IP address
+	Local  Addr      `json:"local" xml:"local"`        // Local network port
+	Remote Addr      `json:"remote" xml:"remote"`      // Remote network port
+	Secure bool      `json:"secure" xml:"secure,attr"` // Secure connection
+	Stats  Stats     `json:"stats" xml:"stats"`        // Statistics
 }
 
 // A network address
@@ -37,15 +36,23 @@ func (a Addr) Append(ary []string) []string {
 	return ary
 }
 
+func (c *Connection) Category() *Category {
+	return c.cat
+}
+
 func (c *Connection) clone() *Connection {
-	return &Connection{
-		ID:       c.ID,
-		Name:     c.Name,
-		Local:    c.Local,
-		Remote:   c.Remote,
-		Time:     c.Time,
-		Duration: time.Now().Sub(c.Time).Truncate(time.Second),
+	now := time.Now()
+
+	r := &Connection{
+		ID:     c.ID,
+		Name:   c.Name,
+		Local:  c.Local,
+		Remote: c.Remote,
+		Stats:  c.Stats,
 	}
+	r.Stats.Duration = now.Sub(r.Stats.Time).Truncate(time.Second)
+	r.Stats.Idle = now.Sub(r.Stats.LastActive).Truncate(time.Second)
+	return r
 }
 
 func ExtractPort(addr net.Addr) (string, uint16, bool) {
@@ -73,9 +80,12 @@ func (c *Category) Add(local, remote net.Addr) *Connection {
 
 	var con *Connection
 
-	_ = c.s.invoke(func() error {
+	_ = c.s.Invoke(func() error {
 
 		c.ConnectionCount++
+
+		now := time.Now()
+
 		con = &Connection{
 			ID: c.ConnectionCount,
 			Local: Addr{
@@ -88,8 +98,11 @@ func (c *Category) Add(local, remote net.Addr) *Connection {
 				Port:      rp,
 				Valid:     rv,
 			},
-			Time: time.Now().UTC(),
-			cat:  c,
+			Stats: Stats{
+				Time:       now,
+				LastActive: now,
+			},
+			cat: c,
 		}
 		c.connections[con.ID] = con
 
@@ -104,11 +117,39 @@ func (c *Category) Add(local, remote net.Addr) *Connection {
 // Remove a Connection from it's Category
 func (con *Connection) Remove() {
 	if con != nil && con.cat != nil {
-		_ = con.cat.s.invoke(func() error {
+		_ = con.cat.s.Invoke(func() error {
 			delete(con.cat.connections, con.ID)
 			log.Println("Rem", con.cat.Name, con.ID)
 			con.cat = nil
 			return nil
 		})
 	}
+}
+
+func (con *Connection) BytesIn(n int) {
+	cat := con.Category()
+	_ = cat.Status().Invoke(func() error {
+		now := time.Now()
+		con.Stats.LastActive = now
+		cat.Stats.LastActive = now
+
+		con.Stats.BytesIn += n
+		cat.Stats.BytesIn += n
+
+		return nil
+	})
+}
+
+func (con *Connection) BytesOut(n int) {
+	cat := con.Category()
+	_ = cat.Status().Invoke(func() error {
+		now := time.Now()
+		con.Stats.LastActive = now
+		cat.Stats.LastActive = now
+
+		con.Stats.BytesOut += n
+		cat.Stats.BytesOut += n
+
+		return nil
+	})
 }

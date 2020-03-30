@@ -1,9 +1,8 @@
-package connector
+package server
 
 import (
 	"errors"
 	"fmt"
-	"github.com/peter-mount/beebrail/server"
 	"github.com/peter-mount/beebrail/server/status"
 	"github.com/peter-mount/go-telnet"
 	"github.com/peter-mount/go-telnet/telsh"
@@ -12,15 +11,15 @@ import (
 )
 
 type Telnet struct {
-	config *server.Config      // Config file
-	server *server.Server      // the underlying server
+	config *Config             // Config file
+	server *Server             // the underlying server
 	stats  *status.Status      // Status manager
 	ports  []*telnetConnection // Active telnet ports
 }
 
 type telnetConnection struct {
 	parent  *Telnet             // pointer to parent
-	config  server.TelnetConfig // Config for this instance
+	config  TelnetConfig        // Config for this instance
 	cat     *status.Category    // Status Category for this port
 	handler *telsh.ShellHandler // Telnet handler
 }
@@ -31,17 +30,17 @@ func (t *Telnet) Name() string {
 
 func (t *Telnet) Init(k *kernel.Kernel) error {
 
-	service, err := k.AddService(&server.Config{})
+	service, err := k.AddService(&Config{})
 	if err != nil {
 		return err
 	}
-	t.config = (service).(*server.Config)
+	t.config = (service).(*Config)
 
-	service, err = k.AddService(&server.Server{})
+	service, err = k.AddService(&Server{})
 	if err != nil {
 		return err
 	}
-	t.server = (service).(*server.Server)
+	t.server = (service).(*Server)
 
 	service, err = k.AddService(&status.Status{})
 	if err != nil {
@@ -53,20 +52,17 @@ func (t *Telnet) Init(k *kernel.Kernel) error {
 }
 
 func (t *Telnet) PostInit() error {
+	cat := t.stats.AddCategory("telnet", "Telnet")
+
 	for _, c := range t.config.Telnet {
 		if c.Port == 0 {
 			return errors.New("invalid telnet port")
 		}
 
-		titleFmt := "Telnet Insecure"
-		if c.Secure {
-			titleFmt = "Telnet Secure"
-		}
-
 		tc := &telnetConnection{
 			parent: t,
 			config: c,
-			cat:    t.stats.AddCategory(fmt.Sprintf("telnet%05d", c.Port), titleFmt),
+			cat:    cat,
 		}
 		tc.cat.Port = c.Port
 		t.ports = append(t.ports, tc)
@@ -87,7 +83,7 @@ func (t *Telnet) Start() error {
 func (tc *telnetConnection) start() {
 	var err error
 	port := fmt.Sprintf("%s:%d", tc.config.Interface, tc.config.Port)
-	tc.handler = server.NewShell(tc.parent.server)
+	tc.handler = NewShell(tc.parent.server)
 
 	log.Println("Starting telnet", port, "secure", tc.config.Secure)
 	if tc.config.Secure {
@@ -103,8 +99,36 @@ func (tc *telnetConnection) start() {
 func (tc *telnetConnection) ServeTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
 
 	con := tc.cat.Add(ctx.LocalAddr(), ctx.RemoteAddr())
-
 	defer con.Remove()
 
-	tc.handler.ServeTELNET(ctx, w, r)
+	wrapper := &telnetWrapper{
+		reader: r,
+		writer: w,
+		con:    con,
+	}
+
+	tc.handler.ServeTELNET(ctx, wrapper, wrapper)
+}
+
+// Wrapper to record idle time & bytes read/written
+type telnetWrapper struct {
+	reader telnet.Reader
+	writer telnet.Writer
+	con    *status.Connection
+}
+
+func (w *telnetWrapper) Read(b []byte) (int, error) {
+	n, err := w.reader.Read(b)
+	if n > 0 {
+		w.con.BytesIn(n)
+	}
+	return n, err
+}
+
+func (w *telnetWrapper) Write(b []byte) (int, error) {
+	n, err := w.writer.Write(b)
+	if n > 0 {
+		w.con.BytesOut(n)
+	}
+	return n, err
 }

@@ -9,6 +9,7 @@ type SnapshotCategory struct {
 	Name    string        `json:"name" xml:"name,attr"`                  // Name of this category
 	Title   string        `json:"title" xml:"title,attr,omitempty"`      // Title of this category
 	Port    uint16        `json:"port,omitempty" xml:"port,omitempty"`   // Optional port for this category
+	Stats   Stats         `json:"stats" xml:"stats"`                     // Statistics
 	Entries []*Connection `json:"connection,omitempty" xml:"connection"` // Connections in this category
 }
 
@@ -22,7 +23,12 @@ func (s *Status) Snapshot() *Snapshot {
 	ret := &Snapshot{}
 
 	_ = s.ForEach(func(category *Category) error {
-		cat := &SnapshotCategory{Name: category.Name, Title: category.Title, Port: category.Port}
+		cat := &SnapshotCategory{
+			Name:  category.Name,
+			Title: category.Title,
+			Port:  category.Port,
+			Stats: category.Stats,
+		}
 		ret.Entries = append(ret.Entries, cat)
 		return nil
 	})

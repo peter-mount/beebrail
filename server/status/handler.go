@@ -48,26 +48,37 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 		"</style>",
 		"<meta http-equiv=\"refresh\" content=\"10\"/>",
 		"</head><body>",
-		"<table class=\"tbl\">",
-		"<tr class=\"titre\">",
-		"<th rowspan=\"2\"></th>",
-		"<th colspan=\"2\">Time</th>",
-		"<th colspan=\"2\">Local</th>",
-		"<th colspan=\"2\">Remote</th>",
-		"<th rowspan=\"2\">Secure</th>",
-		"</tr>",
-		"<tr class=\"titre\">",
-		"<th>Connected</th><th>Duration</th>",
-		"<th>Interface</th><th>Port</th>",
-		"<th>Interface</th><th>Port</th>",
-		"</tr>",
 	}
 
 	for _, cat := range s.Snapshot().Entries {
+
+		a = append(a,
+			"<table class=\"tbl\" width=\"100%\">",
+			"<tr class=\"titre\">",
+			"<th class=\"pxname\" width=\"10%\">", cat.Title, "</th>",
+			"<th class=\"empty\" width=\"90%\"></th>",
+			"</tr></table>",
+			"<table class=\"tbl\" width=\"100%\">",
+			"<tr class=\"titre\">",
+			"<th rowspan=\"2\"></th>",
+			"<th colspan=\"3\">Time</th>",
+			"<th colspan=\"2\">Local</th>",
+			"<th colspan=\"2\">Remote</th>",
+			"<th rowspan=\"2\">Secure</th>",
+			"<th colspan=\"2\">Bytes</th>",
+			"</tr>",
+			"<tr class=\"titre\">",
+			"<th>Connected</th><th>Duration</th><th>Idle</th>",
+			"<th>Interface</th><th>Port</th>",
+			"<th>Interface</th><th>Port</th>",
+			"<th>In</th><th>Out</th>",
+			"</tr>",
+		)
+
 		for _, con := range cat.Entries {
 			a = append(a, "<tr class=\"active_up\"><td class=\"ac\">")
 			if con.Name == "" {
-				a = append(a, fmt.Sprintf("%s %d", cat.Title, con.ID))
+				a = append(a, fmt.Sprintf("%d", con.ID))
 			} else {
 				a = append(a, con.Name)
 			}
@@ -75,39 +86,43 @@ func (s *Status) htmlHandler(r *rest.Rest) error {
 
 			a = append(a,
 				"<td>",
-				con.Time.Format(time.RFC3339),
+				con.Stats.Time.Format(time.RFC3339),
 				"</td><td>",
-				con.Duration.String(),
+				con.Stats.Duration.String(),
+				//now.Sub(con.Time).Truncate(time.Second).String(),
+				"</td><td>",
+				con.Stats.Idle.String(),
 				"</td>",
 			)
 
 			a = con.Local.Append(a)
 			a = con.Remote.Append(a)
 			a = append(a, fmt.Sprintf(
-				"<td>%v</td>",
+				"<td>%v</td><td>%d</td><td>%d</td>",
 				con.Secure,
+				con.Stats.BytesIn,
+				con.Stats.BytesOut,
 			))
 			a = append(a, "</tr>")
 		}
+
+		a = append(a,
+			"<tr class=\"backend\"><td class=\"ac\">", cat.Title, "</td>",
+			"<td>", cat.Stats.Time.Format(time.RFC3339), "</td>",
+			"<td>", time.Now().Sub(cat.Stats.Time).Truncate(time.Second).String(), "</td>",
+			"<td>", cat.Stats.Idle.Truncate(time.Second).String(), "</td>",
+			"<td colspan=\"5\"></td>",
+		)
+		a = append(a, fmt.Sprintf(
+			"<td>%d</td><td>%d</td>",
+			cat.Stats.BytesIn,
+			cat.Stats.BytesOut,
+		))
+		a = append(a, "</tr></table><p></p>")
+
 	}
 
-	// Status line
-	a = append(a,
-		"<tr class=\"backend\"><td class=\"ac\">Backend</td>",
-		"<td>", s.started.Format(time.RFC3339), "</td>",
-		"<td>", time.Now().UTC().Sub(s.started).Truncate(time.Second).String(), "</td>",
-		"<td></td>",
-		"<td></td>",
-		"<td></td>",
-		"<td></td>",
-		"<td></td>",
-		"</tr>",
-	)
-
-	a = append(a,
-		"</table>",
-		"</body></html>",
-	)
+	a = append(a, "</body></html>")
 
 	r.Status(200).HTML()
 	r.Writer().Write([]byte(strings.Join(a, "")))
