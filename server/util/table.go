@@ -15,14 +15,20 @@ type Table struct {
 
 // Table Header
 type Header struct {
-	Label string // Label of header
-	Align int    // Column alignment
-	Width int    // Width of column (used at write time only)
+	Label  string // Label of header
+	Align  int    // Column alignment
+	Width  int    // Width of column (used at write time only)
+	Prefix string // Optional prefix
 }
 
 type Row struct {
-	parent *Table   // link to parent table
-	cells  []string // Cell contents
+	parent *Table  // link to parent table
+	cells  []*Cell // Cell contents
+}
+
+type Cell struct {
+	Label  string // Cell contents
+	Prefix string // Optional prefix
 }
 
 const (
@@ -33,6 +39,7 @@ const (
 
 // Table styling
 type TableSyle struct {
+	ShowTitle  bool // Show table title
 	HSep       byte // Char separating columns in row separator
 	HLine      byte // Char forming row separator
 	CSep       byte // Char separating columns in rows
@@ -62,6 +69,7 @@ var SQL = TableSyle{
 
 // BBC Mode 8 - i.e. for the BBC Master 128 ROM
 var MODE7 = TableSyle{
+	ShowTitle:  true,  // Show table title
 	HSep:       0,     // no separator
 	HLine:      0,     // no separator
 	CSep:       ' ',   // Space
@@ -163,7 +171,12 @@ func (t *TableSyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) err
 }
 
 func (t *Table) AddHeader(label string) *Table {
-	t.Headers = append(t.Headers, &Header{Label: label})
+	return t.Header(&Header{Label: label})
+	return t
+}
+
+func (t *Table) Header(h *Header) *Table {
+	t.Headers = append(t.Headers, h)
 	return t
 }
 
@@ -188,9 +201,13 @@ func (r *Row) End() *Table {
 	return r.parent
 }
 
-func (r *Row) Append(v string) *Row {
+func (r *Row) Cell(v *Cell) *Row {
 	r.cells = append(r.cells, v)
 	return r
+}
+
+func (r *Row) Append(v string) *Row {
+	return r.Cell(&Cell{Label: v})
 }
 
 func (r *Row) AppendInt(v int) *Row {
@@ -201,7 +218,7 @@ func (r *Row) Appendf(f string, v ...interface{}) *Row {
 	return r.Append(fmt.Sprintf(f, v...))
 }
 
-func (r *Row) Visit(f func(i int, h *Header, c string) error) error {
+func (r *Row) Visit(f func(i int, h *Header, c *Cell) error) error {
 	t := r.parent
 	for i, c := range r.cells {
 		if i >= len(t.Headers) {
@@ -245,8 +262,8 @@ func (t *Table) Write(out io.Writer) error {
 
 	// Now get max width
 	for _, r := range t.Rows {
-		_ = r.Visit(func(i int, h *Header, c string) error {
-			l := len(c)
+		_ = r.Visit(func(i int, h *Header, c *Cell) error {
+			l := len(c.Label)
 			if l > 0 {
 				h := t.Headers[i]
 				if h.Width < l {
@@ -284,9 +301,15 @@ func (t *Table) Write(out io.Writer) error {
 
 	for _, r := range t.Rows {
 		err = t.Style.VisitRow(out, func(o io.Writer) error {
-			return r.Visit(func(i int, h *Header, c string) error {
+			return r.Visit(func(i int, h *Header, c *Cell) error {
 				return t.Style.VisitCell(o, i, func(o io.Writer) error {
-					return h.append(o, c)
+					s := c.Label
+					if c.Prefix != "" {
+						s = c.Prefix + s
+					} else if h.Prefix != "" {
+						s = h.Prefix + s
+					}
+					return h.append(o, s)
 				})
 			})
 		})
