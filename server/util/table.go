@@ -7,12 +7,13 @@ import (
 
 // Table of results
 type Table struct {
-	Style      TableStyle  // Style of table
-	Headers    []*Header   // Column headers
-	Rows       []*Row      // Response rows
-	pagination *Pagination // Page pagination
-	linked     bool        // True if this Table was created from another
-	nextTable  *Table      // next table in the chain
+	Style      TableStyle         // Style of table
+	Headers    []*Header          // Column headers
+	Rows       []*Row             // Response rows
+	pagination *Pagination        // Page pagination
+	linked     bool               // True if this Table was created from another
+	nextTable  *Table             // next table in the chain
+	Callback   PaginationCallback // Callbacks
 }
 
 // Table Header
@@ -86,11 +87,15 @@ var MODE7 = TableStyle{
 // NewTable creates a new table using this one's configuration
 func (t *Table) NewTable() *Table {
 	t1 := &Table{
-		Style:      t.Style,
-		pagination: t.Pagination(),
-		linked:     true,
+		Style:      t.Style,        // Duplicate the style
+		pagination: t.Pagination(), // use the same instance as previous Table
+		linked:     true,           // mark as linked
+		Callback:   t.Callback,     // Duplicate callbacks, this can be changed later
 	}
+
+	// Link to old table
 	t.nextTable = t1
+
 	return t1
 }
 
@@ -185,7 +190,6 @@ func (t *TableStyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) er
 
 func (t *Table) AddHeader(label string) *Table {
 	return t.Header(&Header{Label: label})
-	return t
 }
 
 func (t *Table) Header(h *Header) *Table {
@@ -304,7 +308,7 @@ func (t *Table) Write(out *ResultWriter) error {
 	return nil //write(out, '\n')
 }
 
-func (t *Table) writeHeader(out io.Writer) error {
+func (t *Table) WriteHeader(out *ResultWriter) error {
 	err := t.Style.WriteBorder(out, t)
 	if err != nil {
 		return err
@@ -351,22 +355,33 @@ func (t *Table) writeTable(out *ResultWriter) error {
 		if t.pagination.IsPageBreak(rowNum) {
 			// Start new page
 			if t.pagination.NextPage() {
-				// Page 2 up add a record separator
-				err := out.RecordSeparator()
-				if err != nil {
-					return err
+				if rowNum > 0 {
+					// Page 2 up add a record separator
+					err := out.RecordSeparator()
+					if err != nil {
+						return err
+					}
+				} else if t.linked {
+					// Page 1 but linked then add a Group separator
+					err := out.GroupSeparator()
+					if err != nil {
+						return err
+					}
 				}
-			} else if t.linked {
-				// Page 1 but linked then add a Group separator
-				err := out.GroupSeparator()
+			}
+
+			if t.Callback.PageHeader != nil {
+				err := t.Callback.PageHeader(t.pagination, out)
 				if err != nil {
 					return err
 				}
 			}
 
-			err := t.writeHeader(out)
-			if err != nil {
-				return err
+			if t.Callback.TableHeader != nil {
+				err := t.Callback.TableHeader(out)
+				if err != nil {
+					return err
+				}
 			}
 		}
 

@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"github.com/peter-mount/beebrail/server/util"
+	"github.com/peter-mount/nre-feeds/darwind3"
 	"github.com/peter-mount/nre-feeds/ldb"
 	"github.com/peter-mount/nre-feeds/ldb/service"
 	"regexp"
@@ -65,53 +66,14 @@ func (s *Server) departures(r *ShellRequest) error {
 	t2 := t1.NewTable().
 		AddHeader("Message")
 
+	// No headers for message pages
+	t2.Callback.TableHeader = func(o *util.ResultWriter) error { return nil }
+
 	// We want 1 message per page
 	t2.Style.PageHeight = 1
 
 	for _, m := range sr.Messages {
-		//if m.Active {
-		s := m.Message
-
-		// Strip out More detail... text
-		for _, v := range stripMore {
-			i := strings.Index(s, v)
-			if i > -1 {
-				s = s[:i]
-			}
-		}
-		for _, v := range stripHtml {
-			s = strings.ReplaceAll(s, v, "")
-		}
-
-		// Remove html links
-		re := regexp.MustCompile("(<a.+/a>)")
-		s = re.ReplaceAllString(s, "")
-
-		var v []string
-		for len(s) > 37 {
-			j := 37
-			for s[j] != ' ' && j > 0 {
-				j = j - 1
-			}
-			if j <= 0 {
-				// Just split - should never happen
-				v = append(v, s[:37])
-				s = s[37:]
-			} else {
-				v = append(v, s[:j])
-				if (j + 1) >= len(s) {
-					s = ""
-				} else {
-					s = s[j+1:]
-				}
-			}
-		}
-		if s != "" {
-			v = append(v, s)
-		}
-
-		t2.NewRow().
-			Append(strings.Join(v, "\n"))
+		processMessage(m, t2)
 	}
 
 	return t1.Write(w)
@@ -305,4 +267,50 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 				Append(expected)
 		}
 	*/
+}
+
+func processMessage(m *darwind3.StationMessage, t *util.Table) {
+	//if m.Active {
+	s := m.Message
+
+	// Strip out More detail... text
+	for _, v := range stripMore {
+		i := strings.Index(s, v)
+		if i > -1 {
+			s = s[:i]
+		}
+	}
+	for _, v := range stripHtml {
+		s = strings.ReplaceAll(s, v, "")
+	}
+
+	// Remove html links
+	re := regexp.MustCompile("(<a.+/a>)")
+	s = re.ReplaceAllString(s, "")
+
+	var v []string
+	for len(s) > 37 {
+		j := 37
+		for s[j] != ' ' && j > 0 {
+			j = j - 1
+		}
+		if j <= 0 {
+			// Just split - should never happen
+			v = append(v, s[:37])
+			s = s[37:]
+		} else {
+			v = append(v, s[:j])
+			if (j + 1) >= len(s) {
+				s = ""
+			} else {
+				s = s[j+1:]
+			}
+		}
+	}
+	if s != "" {
+		v = append(v, s)
+	}
+
+	t.NewRow().
+		Append(strings.Join(v, "\n"))
 }

@@ -52,7 +52,7 @@ func (r *ResultWriter) Write(b []byte) (int, error) {
 
 		// STX
 		if r.stxEtx {
-			_, err := r.w.Write([]byte{2})
+			_, err := r.w.Write(stx)
 			if err != nil {
 				return 0, err
 			}
@@ -65,9 +65,16 @@ func (r *ResultWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
+var (
+	stx = []byte{2, 13, 10}  // ASCII STX Start TeXt - mark start of result
+	etx = []byte{3, 13, 10}  // ASCII ETX End TeXT - mark end of result
+	gs  = []byte{29, 13, 10} // ASCII Group Separator - mark new table
+	rs  = []byte{30, 13, 10} // ASCII Record Separator - mark new page in table
+)
+
 func (r *ResultWriter) GroupSeparator() error {
 	if r.stxEtx {
-		_, err := r.w.Write([]byte{29})
+		_, err := r.w.Write(gs)
 		if err != nil {
 			return err
 		}
@@ -77,7 +84,7 @@ func (r *ResultWriter) GroupSeparator() error {
 
 func (r *ResultWriter) RecordSeparator() error {
 	if r.stxEtx {
-		_, err := r.w.Write([]byte{30})
+		_, err := r.w.Write(rs)
 		if err != nil {
 			return err
 		}
@@ -88,7 +95,7 @@ func (r *ResultWriter) RecordSeparator() error {
 func (r *ResultWriter) Close() error {
 	// ETX - also write a new line to terminate the output before the end result
 	if r.stxEtx {
-		_, err := r.w.Write([]byte{3, 13, 10})
+		_, err := r.w.Write(etx)
 		if err != nil {
 			return err
 		}

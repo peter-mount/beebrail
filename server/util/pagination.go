@@ -2,6 +2,7 @@ package util
 
 import "log"
 
+// Pagination handles pages, mainly for Table's
 type Pagination struct {
 	pageNo     int // Current page number from 1
 	pageCount  int // Total number of pages
@@ -9,9 +10,23 @@ type Pagination struct {
 	numRows    int // Number of rows
 }
 
+// PaginationCallback allows customisation of the output
+type PaginationCallback struct {
+	PageHeader  func(p *Pagination, o *ResultWriter) error // Write optional page header
+	TableHeader func(o *ResultWriter) error                // Write the TableHeader
+}
+
 func (t *Table) NewPagination() *Pagination {
 	p := &Pagination{}
+	// Default callbacks
+	t.Callback.PageHeader = func(p *Pagination, o *ResultWriter) error { return nil }
+	t.Callback.TableHeader = t.WriteHeader
+
 	return p.AddPages(t)
+}
+
+func (p *Pagination) PageNo() (int, int) {
+	return p.pageNo, p.pageCount
 }
 
 func (p *Pagination) IncPages(pageCount int) *Pagination {
