@@ -7,10 +7,12 @@ import (
 
 // Table of results
 type Table struct {
-	Title   string     // Table title (optional)
-	Style   TableStyle // Style of table
-	Headers []*Header  // Column headers
-	Rows    []*Row     // Response rows
+	Style      TableStyle  // Style of table
+	Headers    []*Header   // Column headers
+	Rows       []*Row      // Response rows
+	pagination *Pagination // Page pagination
+	linked     bool        // True if this Table was created from another
+	nextTable  *Table      // next table in the chain
 }
 
 // Table Header
@@ -79,6 +81,17 @@ var MODE7 = TableStyle{
 	STX:        2,     // ASCII code
 	ETX:        3,     // ASCII code
 	EOT:        4,     // ASCII code
+}
+
+// NewTable creates a new table using this one's configuration
+func (t *Table) NewTable() *Table {
+	t1 := &Table{
+		Style:      t.Style,
+		pagination: t.Pagination(),
+		linked:     true,
+	}
+	t.nextTable = t1
+	return t1
 }
 
 func (t *TableStyle) WriteCSep(o io.Writer) error {
@@ -276,7 +289,7 @@ func (t *Table) Layout() {
 	}
 }
 
-func (t *Table) Write(out io.Writer) error {
+func (t *Table) Write(out *ResultWriter) error {
 
 	err := t.writeTable(out)
 	if err != nil {
@@ -315,14 +328,42 @@ func (t *Table) writeHeader(out io.Writer) error {
 	return t.Style.WriteSeparator(out, t)
 }
 
-func (t *Table) writeTable(out io.Writer) error {
+func (t *Table) Pagination() *Pagination {
+	if t.pagination == nil {
+		t.pagination = t.NewPagination()
+	}
+	return t.pagination
+}
+
+func (t *Table) writeTable(out *ResultWriter) error {
 
 	t.Layout()
 
-	pagination := t.NewPagination()
+	// Ensure we have a Pagination instance
+	if t.linked {
+		// Add out pages to the output
+		t.pagination.AddPages(t)
+	} else {
+		_ = t.Pagination()
+	}
 
 	for rowNum, r := range t.Rows {
-		if pagination.IsPageBreak(rowNum) {
+		if t.pagination.IsPageBreak(rowNum) {
+			// Start new page
+			if t.pagination.NextPage() {
+				// Page 2 up add a record separator
+				err := out.RecordSeparator()
+				if err != nil {
+					return err
+				}
+			} else if t.linked {
+				// Page 1 but linked then add a Group separator
+				err := out.GroupSeparator()
+				if err != nil {
+					return err
+				}
+			}
+
 			err := t.writeHeader(out)
 			if err != nil {
 				return err
@@ -345,6 +386,10 @@ func (t *Table) writeTable(out io.Writer) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if t.nextTable != nil {
+		return t.nextTable.Write(out)
 	}
 
 	return nil

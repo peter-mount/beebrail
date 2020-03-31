@@ -25,6 +25,7 @@ func (s *Server) search(r *ShellRequest) error {
 	w := r.ResultWriter().
 		Title("Search results").
 		StxEtx(ctx.IsStxEtx())
+	defer w.Close()
 
 	if ctx.IsAPI() {
 		w.Footer("%d results", len(results))

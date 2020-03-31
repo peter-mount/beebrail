@@ -5,6 +5,7 @@ import (
 	"github.com/peter-mount/beebrail/server/util"
 	"github.com/peter-mount/nre-feeds/ldb"
 	"github.com/peter-mount/nre-feeds/ldb/service"
+	"regexp"
 	"strings"
 )
 
@@ -49,18 +50,71 @@ func (s *Server) departures(r *ShellRequest) error {
 	w := r.ResultWriter().
 		Title("CRS %s", crs).
 		StxEtx(ctx.IsStxEtx())
+	defer w.Close()
 
-	t := r.NewTable().
+	t1 := r.NewTable().
 		AddHeaders("Due", "Destination", "Plat", "Expcted")
 
 	include := true
 	for _, s := range sr.Services {
 		if include {
-			processDeparture(crs, sr, s, t)
+			processDeparture(crs, sr, s, t1)
 		}
 	}
 
-	return t.Write(w)
+	t2 := t1.NewTable().
+		AddHeader("Message")
+
+	// We want 1 message per page
+	t2.Style.PageHeight = 1
+
+	for _, m := range sr.Messages {
+		//if m.Active {
+		s := m.Message
+
+		// Strip out More detail... text
+		for _, v := range stripMore {
+			i := strings.Index(s, v)
+			if i > -1 {
+				s = s[:i]
+			}
+		}
+		for _, v := range stripHtml {
+			s = strings.ReplaceAll(s, v, "")
+		}
+
+		// Remove html links
+		re := regexp.MustCompile("(<a.+/a>)")
+		s = re.ReplaceAllString(s, "")
+
+		var v []string
+		for len(s) > 37 {
+			j := 37
+			for s[j] != ' ' && j > 0 {
+				j = j - 1
+			}
+			if j <= 0 {
+				// Just split - should never happen
+				v = append(v, s[:37])
+				s = s[37:]
+			} else {
+				v = append(v, s[:j])
+				if (j + 1) >= len(s) {
+					s = ""
+				} else {
+					s = s[j+1:]
+				}
+			}
+		}
+		if s != "" {
+			v = append(v, s)
+		}
+
+		t2.NewRow().
+			Append(strings.Join(v, "\n"))
+	}
+
+	return t1.Write(w)
 
 	/*
 		header := true

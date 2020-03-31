@@ -74,6 +74,17 @@ func (r *ResultWriter) GroupSeparator() error {
 	}
 	return nil
 }
+
+func (r *ResultWriter) RecordSeparator() error {
+	if r.stxEtx {
+		_, err := r.w.Write([]byte{30})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *ResultWriter) Close() error {
 	// ETX - also write a new line to terminate the output before the end result
 	if r.stxEtx {

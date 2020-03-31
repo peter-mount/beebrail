@@ -1,5 +1,7 @@
 package util
 
+import "log"
+
 type Pagination struct {
 	pageNo     int // Current page number from 1
 	pageCount  int // Total number of pages
@@ -8,16 +10,19 @@ type Pagination struct {
 }
 
 func (t *Table) NewPagination() *Pagination {
-	p := &Pagination{pageHeight: t.Style.PageHeight}
+	p := &Pagination{}
 	return p.AddPages(t)
 }
 
 func (p *Pagination) IncPages(pageCount int) *Pagination {
+	log.Println(p.pageCount, pageCount, p.pageCount+pageCount)
 	p.pageCount = p.pageCount + pageCount
 	return p
 }
 
 func (p *Pagination) AddPages(t *Table) *Pagination {
+	p.pageHeight = t.Style.PageHeight
+
 	numRows := len(t.Rows)
 
 	// Work out how many pages we have
@@ -41,4 +46,9 @@ func (p *Pagination) AddPages(t *Table) *Pagination {
 // IsPageBreak returns true if we should break the table for a specific rowNum
 func (p *Pagination) IsPageBreak(rowNum int) bool {
 	return rowNum == 0 || (p.pageHeight > 0 && (rowNum%p.pageHeight) == 0)
+}
+
+func (p *Pagination) NextPage() bool {
+	p.pageNo++
+	return p.pageNo > 1
 }
