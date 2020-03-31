@@ -3,6 +3,8 @@ package util
 import (
 	"fmt"
 	"io"
+	"log"
+	"strings"
 )
 
 // Table of results
@@ -48,10 +50,7 @@ type TableStyle struct {
 	CSep       byte // Char separating columns in rows
 	Border     bool // Outer border
 	PageHeight int  // Page height, 0=no paging
-	SOH        byte // Start of heading i.e. table, 0=ignore
-	STX        byte // Start of text i.e. page, 0=ignore
-	ETX        byte // End of text i.e. page, 0=ignore
-	EOT        byte // End of Transmission i.e. table, 0=ignore
+	Mode7      bool // true for BBC mode 7 Teletext
 }
 
 // Plain Table Style
@@ -78,10 +77,7 @@ var MODE7 = TableStyle{
 	CSep:       ' ',   // Space
 	Border:     false, // no border
 	PageHeight: 19,    // Mode7 page height minus title & header
-	SOH:        1,     // ASCII code
-	STX:        2,     // ASCII code
-	ETX:        3,     // ASCII code
-	EOT:        4,     // ASCII code
+	Mode7:      true,  // Flag as Mode7
 }
 
 // NewTable creates a new table using this one's configuration
@@ -272,29 +268,64 @@ func (h *Header) append(o io.Writer, v string) error {
 	return err
 }
 
-func (t *Table) Layout() {
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+func (t *Table) layout() {
+
+	// Ensure we have a Pagination instance
+	if t.linked {
+		// Add out pages to the output
+		t.pagination.AddPages(t)
+	} else {
+		_ = t.Pagination()
+	}
+
 	// init column width
 	for _, h := range t.Headers {
-		h.Width = len(h.Label)
+		h.Width = max(h.Width, len(h.Label))
 	}
 
 	// Now get max width
 	for _, r := range t.Rows {
 		_ = r.Visit(func(i int, h *Header, c *Cell) error {
-			l := len(c.Label)
-			if l > 0 {
-				h := t.Headers[i]
-				if h.Width < l {
-					h.Width = l
+			for _, v := range strings.Split(c.Label, "\n") {
+				l := len(v)
+				if l > 0 {
+					h := t.Headers[i]
+					h.Width = max(h.Width, l)
 				}
 			}
 			return nil
 		})
 	}
+
+	// Finally the page width
+	w := 0
+	for _, h := range t.Headers {
+		w = w + h.Width
+	}
+	if w > t.pagination.pageWidth {
+		t.pagination.pageWidth = w
+	}
+
+	// layout the next table
+	if t.nextTable != nil {
+		t.nextTable.layout()
+	}
+
 }
 
 func (t *Table) Write(out *ResultWriter) error {
+	t.layout()
+	return t.write(out)
+}
 
+func (t *Table) write(out *ResultWriter) error {
+	log.Println("write")
 	err := t.writeTable(out)
 	if err != nil {
 		return err
@@ -305,7 +336,11 @@ func (t *Table) Write(out *ResultWriter) error {
 		return err
 	}
 
-	return nil //write(out, '\n')
+	if t.nextTable != nil {
+		return t.nextTable.write(out)
+	}
+
+	return nil
 }
 
 func (t *Table) WriteHeader(out *ResultWriter) error {
@@ -340,16 +375,6 @@ func (t *Table) Pagination() *Pagination {
 }
 
 func (t *Table) writeTable(out *ResultWriter) error {
-
-	t.Layout()
-
-	// Ensure we have a Pagination instance
-	if t.linked {
-		// Add out pages to the output
-		t.pagination.AddPages(t)
-	} else {
-		_ = t.Pagination()
-	}
 
 	for rowNum, r := range t.Rows {
 		if t.pagination.IsPageBreak(rowNum) {
@@ -388,23 +413,33 @@ func (t *Table) writeTable(out *ResultWriter) error {
 		err := t.Style.VisitRow(out, func(o io.Writer) error {
 			return r.Visit(func(i int, h *Header, c *Cell) error {
 				return t.Style.VisitCell(o, i, func(o io.Writer) error {
-					s := c.Label
-					if c.Prefix != "" {
-						s = c.Prefix + s
-					} else if h.Prefix != "" {
-						s = h.Prefix + s
+					// FIXME this only works for multi line for tables of 1 column
+					for i, s := range strings.Split(c.Label, "\n") {
+						if i > 0 {
+							err := out.WriteBytes('\n')
+							if err != nil {
+								return err
+							}
+						}
+
+						if c.Prefix != "" {
+							s = c.Prefix + s
+						} else if h.Prefix != "" {
+							s = h.Prefix + s
+						}
+
+						err := h.append(o, s)
+						if err != nil {
+							return err
+						}
 					}
-					return h.append(o, s)
+					return nil
 				})
 			})
 		})
 		if err != nil {
 			return err
 		}
-	}
-
-	if t.nextTable != nil {
-		return t.nextTable.Write(out)
 	}
 
 	return nil

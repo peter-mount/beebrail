@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"github.com/peter-mount/beebrail/server/util"
 	"github.com/peter-mount/nre-feeds/darwind3"
 	"github.com/peter-mount/nre-feeds/ldb"
@@ -23,6 +24,10 @@ var stripMore = []string{
 	"More detail",
 	"More information",
 }
+
+var (
+	blueDoubleHeight = []byte{AlphaBlue, NewBackground, AlphaWhite, DoubleHeight}
+)
 
 func (s *Server) departures(r *ShellRequest) error {
 	if len(r.Args) != 1 {
@@ -54,7 +59,21 @@ func (s *Server) departures(r *ShellRequest) error {
 	defer w.Close()
 
 	t1 := r.NewTable().
-		AddHeaders("Due", "Destination", "Plat", "Expcted")
+		AddHeaders("Due", "Destination", "Plat")
+	// Expected column is abbreviated for mode 7
+	if t1.Style.Mode7 {
+		t1.AddHeader("Expcted")
+	} else {
+		t1.AddHeader("Expected")
+	}
+
+	// Default minimum widths
+	t1.Headers[0].Width = 4
+	t1.Headers[1].Width = 17
+	t1.Headers[2].Width = 4
+
+	// Page header with Station Name
+	t1.Callback.PageHeader = boardHeader(t1, stationName)
 
 	include := true
 	for _, s := range sr.Services {
@@ -63,11 +82,17 @@ func (s *Server) departures(r *ShellRequest) error {
 		}
 	}
 
+	if len(t1.Rows) == 0 {
+		t1.NewRow().Append("").Append("No services")
+	}
+
 	t2 := t1.NewTable().
 		AddHeader("Message")
 
-	// No headers for message pages
-	t2.Callback.TableHeader = func(o *util.ResultWriter) error { return nil }
+	// No table headers for message pages
+	t2.Callback.TableHeader = func(o *util.ResultWriter) error {
+		return o.WriteString("\n")
+	}
 
 	// We want 1 message per page
 	t2.Style.PageHeight = 1
@@ -270,7 +295,6 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 }
 
 func processMessage(m *darwind3.StationMessage, t *util.Table) {
-	//if m.Active {
 	s := m.Message
 
 	// Strip out More detail... text
@@ -286,31 +310,75 @@ func processMessage(m *darwind3.StationMessage, t *util.Table) {
 
 	// Remove html links
 	re := regexp.MustCompile("(<a.+/a>)")
-	s = re.ReplaceAllString(s, "")
+	msg := re.ReplaceAllString(s, "")
 
 	var v []string
-	for len(s) > 37 {
-		j := 37
-		for s[j] != ' ' && j > 0 {
-			j = j - 1
-		}
-		if j <= 0 {
-			// Just split - should never happen
-			v = append(v, s[:37])
-			s = s[37:]
-		} else {
-			v = append(v, s[:j])
-			if (j + 1) >= len(s) {
-				s = ""
+	for _, s := range strings.Split(msg, "\n") {
+		s = strings.Trim(s, " ")
+		for len(s) > 37 {
+			j := 37
+			for s[j] != ' ' && j > 0 {
+				j = j - 1
+			}
+			if j <= 0 {
+				// Just split - should never happen
+				v = append(v, s[:37])
+				s = s[37:]
 			} else {
-				s = s[j+1:]
+				v = append(v, s[:j])
+				if (j + 1) >= len(s) {
+					s = ""
+				} else {
+					s = s[j+1:]
+				}
 			}
 		}
-	}
-	if s != "" {
-		v = append(v, s)
+		s = strings.Trim(s, " ")
+		if s != "" {
+			v = append(v, s)
+		}
 	}
 
 	t.NewRow().
 		Append(strings.Join(v, "\n"))
+}
+
+func boardHeader(t1 *util.Table, stationName string) func(*util.Pagination, *util.ResultWriter) error {
+	return func(p *util.Pagination, o *util.ResultWriter) error {
+
+		page := p.Page()
+
+		// Station name
+		var title string
+		if page.PageCount > 1 {
+			title = fmt.Sprintf(" %d/%d", page.PageNo, page.PageCount)
+		}
+		w := (page.PageWidth - len(title) - len(stationName) - 1) / 2
+		if t1.Style.Mode7 {
+			w = w - len(blueDoubleHeight)
+		}
+		if w < 0 {
+			w = 0
+		}
+		title = fmt.Sprintf(fmt.Sprintf("%%%ds%%s%%s\n", w), "", stationName, title)
+
+		n := 1
+		if t1.Style.Mode7 {
+			n = 2
+		}
+		for i := 0; i < n; i++ {
+			if t1.Style.Mode7 {
+				_, err := o.Write(blueDoubleHeight)
+				if err != nil {
+					return err
+				}
+			}
+
+			err := o.WriteString(title)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }

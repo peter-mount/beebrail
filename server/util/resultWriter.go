@@ -45,6 +45,16 @@ func (r *ResultWriter) Footer(format string, args ...interface{}) *ResultWriter 
 	return r
 }
 
+func (r *ResultWriter) WriteBytes(b ...byte) error {
+	_, err := r.Write(b)
+	return err
+}
+
+func (r *ResultWriter) WriteString(s string) error {
+	_, err := r.Write([]byte(s[:]))
+	return err
+}
+
 func (r *ResultWriter) Write(b []byte) (int, error) {
 	if !r.initialised {
 		// title
