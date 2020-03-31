@@ -10,7 +10,8 @@ func (s *Server) search(r *ShellRequest) error {
 	}
 	param := r.Args[0]
 
-	r.Connection().Println("Search", param)
+	ctx := r.Context()
+	ctx.Connection().Println("Search", param)
 
 	if len(param) < 3 {
 		return errors.New("Search requires minimum 3 characters")
@@ -23,7 +24,11 @@ func (s *Server) search(r *ShellRequest) error {
 
 	w := r.ResultWriter().
 		Title("Search results").
-		Footer("%d results", len(results))
+		StxEtx(ctx.IsStxEtx())
+
+	if ctx.IsAPI() {
+		w.Footer("%d results", len(results))
+	}
 
 	t := r.NewTable().
 		AddHeaders("CRS", "Station")

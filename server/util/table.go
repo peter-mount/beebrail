@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
 	"io"
-	"log"
 )
 
 // Table of results
@@ -251,9 +250,8 @@ func (h *Header) append(o io.Writer, v string) error {
 		f = "%%%d.%ds"
 	}
 
-	log.Println("app", h.Width, fmt.Sprintf(f, h.Width, h.Width), v)
 	_, err := fmt.Fprintf(o, fmt.Sprintf(f, h.Width, h.Width), v)
-	log.Println("app", err)
+
 	return err
 }
 
@@ -294,21 +292,16 @@ func (t *Table) Write(out io.Writer) error {
 }
 
 func (t *Table) writeHeader(out io.Writer) error {
-	log.Println("h", 1)
 	err := t.Style.WriteBorder(out, t)
 	if err != nil {
 		return err
 	}
 
-	log.Println("h", 2)
 	err = t.Style.VisitRow(out, func(o io.Writer) error {
 		for i, h := range t.Headers {
-			log.Println("h", 2, i, h)
 			err := t.Style.VisitCell(o, i, func(o io.Writer) error {
-				log.Println("h", h)
 				return h.append(o, h.Label)
 			})
-			log.Println("he", err)
 			if err != nil {
 				return err
 			}
@@ -319,7 +312,6 @@ func (t *Table) writeHeader(out io.Writer) error {
 		return err
 	}
 
-	log.Println("h", 3)
 	return t.Style.WriteSeparator(out, t)
 }
 
@@ -330,16 +322,13 @@ func (t *Table) writeTable(out io.Writer) error {
 	pagination := t.NewPagination()
 
 	for rowNum, r := range t.Rows {
-		log.Println(rowNum, 1)
 		if pagination.IsPageBreak(rowNum) {
-			log.Println(rowNum, 1, 1)
 			err := t.writeHeader(out)
 			if err != nil {
 				return err
 			}
 		}
 
-		log.Println(rowNum, 2)
 		err := t.Style.VisitRow(out, func(o io.Writer) error {
 			return r.Visit(func(i int, h *Header, c *Cell) error {
 				return t.Style.VisitCell(o, i, func(o io.Writer) error {
@@ -356,7 +345,6 @@ func (t *Table) writeTable(out io.Writer) error {
 		if err != nil {
 			return err
 		}
-		log.Println(rowNum, "e")
 	}
 
 	return nil

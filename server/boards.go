@@ -28,7 +28,8 @@ func (s *Server) departures(r *ShellRequest) error {
 	}
 	crs := strings.ToUpper(r.Args[0])
 
-	r.Connection().Println("Departures", crs)
+	ctx := r.Context()
+	ctx.Connection().Println("Departures", crs)
 
 	sr, err := s.ldbClient.GetSchedule(crs)
 	if err != nil {
@@ -47,7 +48,7 @@ func (s *Server) departures(r *ShellRequest) error {
 
 	w := r.ResultWriter().
 		Title("CRS %s", crs).
-		StxEtx(false)
+		StxEtx(ctx.IsStxEtx())
 
 	t := r.NewTable().
 		AddHeaders("Due", "Destination", "Plat", "Expcted")

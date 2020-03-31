@@ -5,23 +5,34 @@ import (
 	"strings"
 )
 
-const (
-	KEY_CONNECTION = "connection"
-	KEY_TABLESTYLE = "tableStyle"
-)
-
 func (s *Server) mode(r *ShellRequest) error {
+	var a []string
+	ctx := r.Context()
 	for _, m := range r.Args {
 		switch strings.ToLower(m) {
 		case "plain":
-			r.Put(KEY_TABLESTYLE, util.Plain)
+			ctx.SetTableStyle(util.Plain)
 		case "sql":
-			r.Put(KEY_TABLESTYLE, util.SQL)
+			ctx.SetTableStyle(util.SQL)
 		case "bbc":
-			r.Put(KEY_TABLESTYLE, util.MODE7)
+			ctx.SetTableStyle(util.MODE7)
+		case "api":
+			ctx.SetStxEtx(!ctx.IsStxEtx())
+			// Prefix ! to indicate it's off
+			if !ctx.IsStxEtx() {
+				m = "!" + m
+			}
 		default:
 			r.Printf("Unsupported mode \"%s\"\r\n", m)
+			continue
 		}
+
+		a = append(a, m)
 	}
+
+	if ctx.IsAPI() {
+		r.Writer.Println(util.ERR_OK, strings.Join(a, "\n"))
+	}
+
 	return nil
 }

@@ -30,6 +30,8 @@ func (tc *telnetConnection) RegisterShellCommand(s *telsh.ShellHandler, name str
 				r.Writer = util.NewHumanResponseWriter(stdout)
 			}
 
+			r.context = (*r.userData)[KEY_CONTEXT].(*ShellContext)
+
 			err := c(r)
 
 			if err != nil {
@@ -52,19 +54,16 @@ func (tc *telnetConnection) RegisterShellCommand(s *telsh.ShellHandler, name str
 }
 
 type internalPromotedHandlerFunc struct {
-	err    error
-	fn     telsh.HandlerFunc
-	stdin  io.ReadCloser
-	stdout io.WriteCloser
-	stderr io.WriteCloser
-
+	err        error
+	fn         telsh.HandlerFunc
+	stdin      io.ReadCloser
+	stdout     io.WriteCloser
+	stderr     io.WriteCloser
 	stdinPipe  io.WriteCloser
 	stdoutPipe io.ReadCloser
 	stderrPipe io.ReadCloser
-
-	args []string
-
-	userData *map[string]interface{}
+	args       []string
+	userData   *map[string]interface{}
 }
 
 // PromoteHandlerFunc turns a HandlerFunc into a Handler.

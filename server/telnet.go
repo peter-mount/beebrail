@@ -97,21 +97,30 @@ func (tc *telnetConnection) start() {
 	}
 }
 
+const (
+	KEY_CONTEXT = "context"
+)
+
 func (tc *telnetConnection) ServeTELNET(ctx telnet.Context, w telnet.Writer, r telnet.Reader) {
 
 	con := tc.cat.Add(ctx.LocalAddr(), ctx.RemoteAddr())
 	defer con.Remove()
 
 	// Default settings
-	m := *ctx.UserData()
-	m[KEY_CONNECTION] = con
-	m[KEY_TABLESTYLE] = util.Plain
+	m := ctx.UserData()
+	shellCtx := &ShellContext{
+		connection: con,
+		tableStyle: util.Plain,
+		userData:   m,
+		api:        tc.config.API,
+	}
+	(*m)[KEY_CONTEXT] = shellCtx
 
 	// The appropriate ResponseWriter
 	if tc.config.API {
-		m[util.KEY_WRITER] = util.NewAPIResponseWriter(w)
+		shellCtx.responseWriter = util.NewAPIResponseWriter(w)
 	} else {
-		m[util.KEY_WRITER] = util.NewHumanResponseWriter(w)
+		shellCtx.responseWriter = util.NewHumanResponseWriter(w)
 	}
 
 	wrapper := util.NewTelnetWrapper(r, w, con)

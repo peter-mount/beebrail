@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/peter-mount/beebrail/server/status"
 	"github.com/peter-mount/beebrail/server/util"
 	"io"
 )
@@ -14,19 +13,12 @@ type ShellRequest struct {
 	Stdout   io.WriteCloser          // stdout
 	Stderr   io.WriteCloser          // stderr
 	Writer   util.ResponseWriter     // ResponseWriter attached to Stdout
+	context  *ShellContext           // Shell context
 	userData *map[string]interface{} // user data
 }
 
 func (r *ShellRequest) ResultWriter() *util.ResultWriter {
 	return util.NewResultWriter(r.Writer)
-}
-
-func (r *ShellRequest) Put(k string, v interface{}) {
-	(*r.userData)[k] = v
-}
-
-func (r *ShellRequest) Get(k string) interface{} {
-	return (*r.userData)[k]
 }
 
 func (r *ShellRequest) Print(v ...interface{}) *ShellRequest {
@@ -44,19 +36,11 @@ func (r *ShellRequest) Println(v ...interface{}) *ShellRequest {
 	return r
 }
 
-// convenience method to get the Connection
-func (r *ShellRequest) Connection() *status.Connection {
-	return (r.Get(KEY_CONNECTION)).(*status.Connection)
-}
-
-// convenience method to get the current TableStyle
-func (r *ShellRequest) TableStyle() util.TableStyle {
-	return (r.Get(KEY_TABLESTYLE)).(util.TableStyle)
+func (r *ShellRequest) Context() *ShellContext {
+	return r.context
 }
 
 // convenience method to create a new Table
 func (r *ShellRequest) NewTable() *util.Table {
-	return &util.Table{
-		Style: r.TableStyle(),
-	}
+	return &util.Table{Style: r.Context().TableStyle()}
 }

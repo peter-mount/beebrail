@@ -65,10 +65,19 @@ func (r *ResultWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-func (r *ResultWriter) Close() error {
-	// ETX
+func (r *ResultWriter) GroupSeparator() error {
 	if r.stxEtx {
-		_, err := r.w.Write([]byte{3})
+		_, err := r.w.Write([]byte{29})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (r *ResultWriter) Close() error {
+	// ETX - also write a new line to terminate the output before the end result
+	if r.stxEtx {
+		_, err := r.w.Write([]byte{3, 13, 10})
 		if err != nil {
 			return err
 		}

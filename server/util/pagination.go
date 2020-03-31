@@ -1,7 +1,5 @@
 package util
 
-import "log"
-
 type Pagination struct {
 	pageNo     int // Current page number from 1
 	pageCount  int // Total number of pages
@@ -16,12 +14,6 @@ func (t *Table) NewPagination() *Pagination {
 
 func (p *Pagination) IncPages(pageCount int) *Pagination {
 	p.pageCount = p.pageCount + pageCount
-	log.Printf("no %d count %d height %d rows %d",
-		p.pageNo,
-		p.pageCount,
-		p.pageHeight,
-		p.numRows,
-	)
 	return p
 }
 

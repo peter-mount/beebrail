@@ -20,7 +20,9 @@ func (s *Server) crs(r *ShellRequest) error {
 	}
 	crs := strings.ToUpper(r.Args[0])
 
-	r.Connection().Println("CRS", crs)
+	ctx := r.Context()
+
+	ctx.Connection().Println("CRS", crs)
 
 	response, err := s.refClient.GetCrs(crs)
 	if err != nil {
@@ -29,14 +31,17 @@ func (s *Server) crs(r *ShellRequest) error {
 
 	w := r.ResultWriter().
 		Title("CRS %s", crs).
-		StxEtx(false)
+		StxEtx(ctx.IsStxEtx())
 	defer w.Close()
 
 	t := r.NewTable().
 		AddHeaders("CRS", "Tiploc", "Toc", "Name")
 
 	if response != nil {
-		w.Footer("%d rows", len(response.Tiploc))
+		if ctx.IsAPI() {
+			w.Footer("%d rows", len(response.Tiploc))
+		}
+
 		for _, tpl := range response.Tiploc {
 			t.NewRow().
 				Append(tpl.Crs).
