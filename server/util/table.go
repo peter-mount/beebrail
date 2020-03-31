@@ -254,7 +254,7 @@ func (h *Header) append(o io.Writer, v string) error {
 	return err
 }
 
-func (t *Table) Write(out io.Writer) error {
+func (t *Table) Layout() {
 	// init column width
 	for _, h := range t.Headers {
 		h.Width = len(h.Label)
@@ -273,7 +273,24 @@ func (t *Table) Write(out io.Writer) error {
 			return nil
 		})
 	}
+}
 
+func (t *Table) Write(out io.Writer) error {
+
+	err := t.writeTable(out)
+	if err != nil {
+		return err
+	}
+
+	err = t.Style.WriteBorder(out, t)
+	if err != nil {
+		return err
+	}
+
+	return nil //write(out, '\n')
+}
+
+func (t *Table) writeHeader(out io.Writer) error {
 	err := t.Style.WriteBorder(out, t)
 	if err != nil {
 		return err
@@ -294,13 +311,24 @@ func (t *Table) Write(out io.Writer) error {
 		return err
 	}
 
-	err = t.Style.WriteSeparator(out, t)
-	if err != nil {
-		return err
-	}
+	return t.Style.WriteSeparator(out, t)
+}
 
-	for _, r := range t.Rows {
-		err = t.Style.VisitRow(out, func(o io.Writer) error {
+func (t *Table) writeTable(out io.Writer) error {
+
+	t.Layout()
+
+	pagination := t.NewPagination()
+
+	for rowNum, r := range t.Rows {
+		if pagination.IsPageBreak(rowNum) {
+			err := t.writeHeader(out)
+			if err != nil {
+				return err
+			}
+		}
+
+		err := t.Style.VisitRow(out, func(o io.Writer) error {
 			return r.Visit(func(i int, h *Header, c *Cell) error {
 				return t.Style.VisitCell(o, i, func(o io.Writer) error {
 					s := c.Label
@@ -318,10 +346,5 @@ func (t *Table) Write(out io.Writer) error {
 		}
 	}
 
-	err = t.Style.WriteBorder(out, t)
-	if err != nil {
-		return err
-	}
-
-	return write(out, '\n')
+	return nil
 }

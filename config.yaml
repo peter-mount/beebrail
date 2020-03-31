@@ -10,7 +10,6 @@ tls:
 # Private key
 #  key: /path/to/ssl-cert-snakeoil.key
 
-# The shell environment
 shell:
   # Command prompt
   prompt: ">"
@@ -21,7 +20,20 @@ shell:
 
 # List of telnet ports to open
 telnet:
-  - # The port to listen to
+  - # Shell for humans
+    # The port to listen to
     port: 8081
     # true use telnet-ssl or plain telnet
     secure: false
+    shell:
+      prompt: ">"
+      welcomeMessage: "\n\nWelcome to departureboards.mobi\n"
+      exitMessage: "Goodbye\n"
+  - # Shell for computers
+    port: 8082
+    secure: false
+    api: true
+    shell:
+      prompt: ""
+      welcomeMessage: "Welcome to departureboards.mobi"
+      exitMessage: "Goodbye"

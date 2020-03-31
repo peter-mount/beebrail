@@ -13,6 +13,7 @@ type ShellRequest struct {
 	Stdin    io.ReadCloser           // stdin
 	Stdout   io.WriteCloser          // stdout
 	Stderr   io.WriteCloser          // stderr
+	Writer   util.ResponseWriter     // ResponseWriter attached to Stdout
 	userData *map[string]interface{} // user data
 }
 

@@ -9,7 +9,7 @@ import (
 
 type ShellCommand func(request *ShellRequest) error
 
-func RegisterShellCommand(s *telsh.ShellHandler, name string, c ShellCommand) {
+func (tc *telnetConnection) RegisterShellCommand(s *telsh.ShellHandler, name string, c ShellCommand) {
 
 	produce := func(ctx telnet.Context, name string, args ...string) telsh.Handler {
 

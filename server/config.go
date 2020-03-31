@@ -24,18 +24,18 @@ type Config struct {
 		Reference string `yaml:"reference"` // The ref service url
 		LDB       string `yaml:"ldb"`       // The LDB service url
 	} `yaml:"services"`
-
-	Shell struct {
-		Prompt         string `yaml:"prompt"`         // Command prompt
-		WelcomeMessage string `yaml:"welcomeMessage"` // Welcome message
-		ExitMessage    string `yaml:"exitMessage"`    // Exit message
-	}
 }
 
 type TelnetConfig struct {
 	Interface string `yaml:"interface"` // Interface "" for any
 	Port      uint16 `yaml:"port"`      // Port
 	Secure    bool   `yaml:"secure"`    // Secure or insecure
+	API       bool   `yaml:"api"`       // True for shell intended for computer rather than human
+	Shell     struct {
+		Prompt         string `yaml:"prompt"`         // Command prompt
+		WelcomeMessage string `yaml:"welcomeMessage"` // Welcome message
+		ExitMessage    string `yaml:"exitMessage"`    // Exit message
+	} `yaml:"shell"`
 }
 
 func (c *Config) Name() string {

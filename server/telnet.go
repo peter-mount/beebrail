@@ -84,7 +84,7 @@ func (t *Telnet) Start() error {
 func (tc *telnetConnection) start() {
 	var err error
 	port := fmt.Sprintf("%s:%d", tc.config.Interface, tc.config.Port)
-	tc.handler = NewShell(tc.parent.server)
+	tc.handler = tc.NewShell(tc.parent.server)
 
 	log.Println("Starting telnet", port, "secure", tc.config.Secure)
 	if tc.config.Secure {
@@ -107,34 +107,14 @@ func (tc *telnetConnection) ServeTELNET(ctx telnet.Context, w telnet.Writer, r t
 	m[KEY_CONNECTION] = con
 	m[KEY_TABLESTYLE] = util.Plain
 
-	wrapper := &telnetWrapper{
-		reader: r,
-		writer: w,
-		con:    con,
+	// The appropriate ResponseWriter
+	if tc.config.API {
+		m[util.KEY_WRITER] = util.NewAPIResponseWriter(w)
+	} else {
+		m[util.KEY_WRITER] = util.NewHumanResponseWriter(w)
 	}
+
+	wrapper := util.NewTelnetWrapper(r, w, con)
 
 	tc.handler.ServeTELNET(ctx, wrapper, wrapper)
-}
-
-// Wrapper to record idle time & bytes read/written
-type telnetWrapper struct {
-	reader telnet.Reader
-	writer telnet.Writer
-	con    *status.Connection
-}
-
-func (w *telnetWrapper) Read(b []byte) (int, error) {
-	n, err := w.reader.Read(b)
-	if n > 0 {
-		w.con.BytesIn(n)
-	}
-	return n, err
-}
-
-func (w *telnetWrapper) Write(b []byte) (int, error) {
-	n, err := w.writer.Write(b)
-	if n > 0 {
-		w.con.BytesOut(n)
-	}
-	return n, err
 }
