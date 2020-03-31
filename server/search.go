@@ -21,8 +21,12 @@ func (s *Server) search(r *ShellRequest) error {
 		return err
 	}
 
-	t := r.NewTable("Search results")
-	t.AddHeaders("CRS", "Station")
+	w := r.ResultWriter().
+		Title("Search results").
+		Footer("%d results", len(results))
+
+	t := r.NewTable().
+		AddHeaders("CRS", "Station")
 
 	for _, res := range results {
 		t.NewRow().
@@ -30,7 +34,7 @@ func (s *Server) search(r *ShellRequest) error {
 			Append(res.Name)
 	}
 
-	return t.Write(r.Stdout)
+	return t.Write(w)
 	/*
 	   r := NewResult(func(p *Page) {
 	     m := "Search results"

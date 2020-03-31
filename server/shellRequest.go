@@ -17,6 +17,10 @@ type ShellRequest struct {
 	userData *map[string]interface{} // user data
 }
 
+func (r *ShellRequest) ResultWriter() *util.ResultWriter {
+	return util.NewResultWriter(r.Writer)
+}
+
 func (r *ShellRequest) Put(k string, v interface{}) {
 	(*r.userData)[k] = v
 }
@@ -51,9 +55,8 @@ func (r *ShellRequest) TableStyle() util.TableStyle {
 }
 
 // convenience method to create a new Table
-func (r *ShellRequest) NewTable(title string) *util.Table {
+func (r *ShellRequest) NewTable() *util.Table {
 	return &util.Table{
-		Title: title,
 		Style: r.TableStyle(),
 	}
 }

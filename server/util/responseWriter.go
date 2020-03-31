@@ -9,6 +9,7 @@ import (
 // ResponseWriter is an interface to handling output to either a human or a computer using a fixed
 // API
 type ResponseWriter interface {
+	io.Writer
 	Println(level int, args ...interface{})
 	Printf(level int, format string, args ...interface{})
 }
@@ -16,8 +17,9 @@ type ResponseWriter interface {
 const (
 	ERR_INFORMATIONAL   = 100
 	ERR_OK              = 200
+	ERR_RESULT          = 201
 	ERR_NOT_FOUND       = 404
-	ERROR               = 500
+	ERR_ERROR           = 500
 	ERR_UNKNOWN_COMMAND = 501
 )
 
@@ -30,12 +32,16 @@ type HumanResponseWriter struct {
 	out io.Writer
 }
 
+func (w *HumanResponseWriter) Write(b []byte) (int, error) {
+	return w.out.Write(b)
+}
+
 func NewHumanResponseWriter(out io.Writer) ResponseWriter {
 	return &HumanResponseWriter{out: out}
 }
 
 func (w *HumanResponseWriter) write(s string) {
-	s = strings.ReplaceAll(s, "\n", "\r\n")
+	s = strings.ReplaceAll(s, "\n", "\r\n") + "\r\n"
 	_, _ = w.out.Write([]byte(s[:]))
 }
 
@@ -69,14 +75,19 @@ func WriteString(level int, s string, f func(s string)) {
 	}
 }
 
+func (w *APIResponseWriter) write(s string) {
+	s = strings.ReplaceAll(s, "\n", "\r\n") + "\r\n"
+	_, _ = w.out.Write([]byte(s))
+}
+
+func (w *APIResponseWriter) Write(b []byte) (int, error) {
+	return w.out.Write(b)
+}
+
 func (w *APIResponseWriter) Println(level int, args ...interface{}) {
-	WriteString(level, fmt.Sprint(args...), func(s string) {
-		_, _ = w.out.Write([]byte(s))
-	})
+	WriteString(level, fmt.Sprint(args...), w.write)
 }
 
 func (w *APIResponseWriter) Printf(level int, format string, args ...interface{}) {
-	WriteString(level, fmt.Sprintf(format, args...), func(s string) {
-		_, _ = w.out.Write([]byte(s))
-	})
+	WriteString(level, fmt.Sprintf(format, args...), w.write)
 }

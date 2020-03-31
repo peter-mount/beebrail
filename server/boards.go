@@ -45,8 +45,12 @@ func (s *Server) departures(r *ShellRequest) error {
 		stationName = d.Name
 	}
 
-	t := r.NewTable("CRS " + crs)
-	t.AddHeaders("Due", "Destination", "Plat", "Expcted")
+	w := r.ResultWriter().
+		Title("CRS %s", crs).
+		StxEtx(false)
+
+	t := r.NewTable().
+		AddHeaders("Due", "Destination", "Plat", "Expcted")
 
 	include := true
 	for _, s := range sr.Services {
@@ -54,6 +58,8 @@ func (s *Server) departures(r *ShellRequest) error {
 			processDeparture(crs, sr, s, t)
 		}
 	}
+
+	return t.Write(w)
 
 	/*
 		header := true
@@ -147,8 +153,6 @@ func (s *Server) departures(r *ShellRequest) error {
 
 		return cmd.EmptyResponse(0).AppendPages(r)
 	*/
-
-	return t.Write(r.Stdout)
 }
 
 func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *util.Table) {

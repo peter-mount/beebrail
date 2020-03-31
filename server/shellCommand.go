@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/peter-mount/beebrail/server/util"
 	"github.com/peter-mount/go-telnet"
 	"github.com/peter-mount/go-telnet/telsh"
 	"io"
@@ -14,14 +15,26 @@ func (tc *telnetConnection) RegisterShellCommand(s *telsh.ShellHandler, name str
 	produce := func(ctx telnet.Context, name string, args ...string) telsh.Handler {
 
 		handler := func(stdin io.ReadCloser, stdout io.WriteCloser, stderr io.WriteCloser, args ...string) error {
-			err := c(&ShellRequest{
+			r := &ShellRequest{
 				Name:     name,
 				Args:     args,
 				Stdin:    stdin,
 				Stdout:   stdout,
 				Stderr:   stderr,
 				userData: ctx.UserData(),
-			})
+			}
+
+			if tc.config.API {
+				r.Writer = util.NewAPIResponseWriter(stdout)
+			} else {
+				r.Writer = util.NewHumanResponseWriter(stdout)
+			}
+
+			err := c(r)
+
+			if err != nil {
+				r.Writer.Println(util.ERR_ERROR, err.Error())
+			}
 
 			// This allows for streams (mainly stdout) to write before the command prompt is written
 			// otherwise it appears in the wrong place

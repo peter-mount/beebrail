@@ -2,10 +2,19 @@ package server
 
 import (
 	"errors"
+	"log"
 	"strings"
 )
 
 func (s *Server) Crs(r *ShellRequest) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC", r)
+		}
+	}()
+	return s.crs(r)
+}
+func (s *Server) crs(r *ShellRequest) error {
 	if len(r.Args) != 1 {
 		return errors.New("Syntax: crs code")
 	}
@@ -18,10 +27,16 @@ func (s *Server) Crs(r *ShellRequest) error {
 		return err
 	}
 
-	t := r.NewTable("CRS " + crs)
-	t.AddHeaders("CRS", "Tiploc", "Toc", "Name")
+	w := r.ResultWriter().
+		Title("CRS %s", crs).
+		StxEtx(false)
+	defer w.Close()
+
+	t := r.NewTable().
+		AddHeaders("CRS", "Tiploc", "Toc", "Name")
 
 	if response != nil {
+		w.Footer("%d rows", len(response.Tiploc))
 		for _, tpl := range response.Tiploc {
 			t.NewRow().
 				Append(tpl.Crs).
@@ -29,9 +44,9 @@ func (s *Server) Crs(r *ShellRequest) error {
 				Append(tpl.Toc).
 				Append(tpl.Name)
 		}
-
-		_ = t.Write(r.Stdout)
 	}
+
+	_ = t.Write(w)
 
 	return nil
 	/*
