@@ -344,6 +344,10 @@ ASCII_RS    = 30
 
 ; Redisplay the current page
 .displayPage
+    JSR useCommandRow               ; Clear command row
+    LDA #12
+    JSR oswrch
+
     JSR cls                         ; Clear screen
 .displayPage0
     JSR readCommandBuffer

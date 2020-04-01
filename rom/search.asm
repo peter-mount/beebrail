@@ -15,19 +15,14 @@
     LDA #10                         ; Char 4 is always terminator
     STA currentStation+3
 .departures0                        ; reload departures using currentStation
-    ; FIXME optimise this
-    LDA #'d':STA inputBuffer
-    LDA #'e':STA inputBuffer+1
-    LDA #'p':STA inputBuffer+2
-    LDA #'a':STA inputBuffer+3
-    LDA #'r':STA inputBuffer+4
-    LDA #'t':STA inputBuffer+5
-    LDA #' ':STA inputBuffer+6
+    LDX #<departCmd
+    LDY #>departCmd
+    JSR appendSearchCommand
     LDY #0                          ; so copy currentStation into inputBuffer
     LDX #4
 .departures1
     LDA currentStation,Y
-    STA inputBuffer+7,Y
+    STA inputBuffer,Y
     INY
     DEX
     BNE departures1
@@ -40,13 +35,17 @@
 
 ; Handles the search by crs code
 .crsSearch
-    LDA #'C'                        ; Command 'C'
+    LDX #<crsCmd
+    LDY #>crsCmd
+    JSR appendSearchCommand
     BRA searchMode7
 
 ; search performs a station name/crs search just like the field on the
 ; departureboards.mobi home page.
 .search
-    LDA #'S'                        ; Command 'S' is for search
+    LDX #<searchCmd
+    LDY #>searchCmd
+    JSR appendSearchCommand
 ; Perform a Mode7 search
 ;
 ; Entry:
@@ -54,7 +53,6 @@
 ;   inputBuffer containing the search parameter to send
 ;
 .searchMode7
-    JSR resetCommandBuffer
     JSR appendInputBuffer           ; Add command line to payload
     LDA #10
     JSR appendCommand
@@ -70,6 +68,27 @@
     JSR cls
 
     JMP showResponse                ; Mode7 response
+
+.appendSearchCommand
+    STX tmpaddr
+    STY tmpaddr+1
+    JSR resetCommandBuffer
+    LDY #0
+.appendSearchCommand0
+    LDA (tmpaddr),Y
+    BEQ appendSearchCommand1
+    JSR appendCommand
+    INY
+    BRA appendSearchCommand0
+.appendSearchCommand1
+    RTS
+
+.departCmd
+    EQUS "depart ",0
+.crsCmd
+    EQUS "crs ",0
+.searchCmd
+    EQUS "search ", 0
 
 .searchingText
     EQUS 12, 131, 157, 129, "Searching...", 0
