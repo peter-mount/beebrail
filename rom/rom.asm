@@ -14,19 +14,19 @@
 
 ; ********************************************************************************
 ; Zero page allocations
-bufferPos       = &00                   ; Current position of command buffer
-sendPos         = &02                   ; Used in command processing
-highmem         = &04                   ; HIGHMEM
-page            = &06                   ; PAGE
-inputBufferPos  = &08                   ; line length in inputBuffer excluding CR
-lastCommand     = &09                   ; Last requested command
-curPage         = &0a                   ; The current page in a result set being displayed
-totalPages      = &0b                   ; The number of pages in a result set
-pageStart       = &0c                   ; Start of current page data
-pageEnd         = &0e                   ; End of current page data
-currentStation  = &10                   ; 4 bytes current crs code + CR
-reloadCounter   = &14                   ; counter for reloading
-tmpaddr         = &70                   ; 2 bytes for (tmpaddr),Y type calls, BASIC friendly
+bufferPos           = &00               ; Current position of command buffer
+sendPos             = &02               ; Used in command processing
+highmem             = &04               ; HIGHMEM
+page                = &06               ; PAGE
+inputBufferPos      = &08               ; line length in inputBuffer excluding CR
+inputBufferStart    = &09               ; Start of parsed command
+curPage             = &0a               ; The current page in a result set being displayed
+totalPages          = &0b               ; The number of pages in a result set
+pageStart           = &0c               ; Start of current page data
+pageEnd             = &0e               ; End of current page data
+currentStation      = &10               ; 4 bytes current crs code + CR
+reloadCounter       = &14               ; counter for reloading
+tmpaddr             = &70               ; 2 bytes for (tmpaddr),Y type calls, BASIC friendly
                                         ; 5 bytes when used for OSWORD &00
 
 ; Page 4,5,6 & 7 are for the current language

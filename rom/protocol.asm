@@ -136,20 +136,6 @@ ASCII_RS    = 30
 .bufferPosSendPosEqualExit
     RTS
 
-; Starts a command
-; Entry:
-;   A   command code
-; Exit:
-;   X Y preserved
-.startCommand
-    JSR resetCommandBuffer
-    STA lastCommand             ; Save command code for later
-    JSR appendCommand           ; Append command code
-    LDA #0                      ; Append 0 (as this is the status byte)
-    JSR appendCommand
-    JSR incBufferPos            ; Skip 2 bytes for the buffer size
-    BRA incBufferPos            ; We'll set these up later
-
 ; Read next byte from command buffer
 .readCommandBuffer
     LDA (bufferPos)
