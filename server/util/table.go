@@ -46,7 +46,9 @@ type TableStyle struct {
 	ShowTitle  bool // Show table title
 	HSep       byte // Char separating columns in row separator
 	HLine      byte // Char forming row separator
+	Separator  bool // true to enable the separator bar
 	CSep       byte // Char separating columns in rows
+	HCSep      byte // Char separating columns in headers, normally same as CSep
 	Border     bool // Outer border
 	PageHeight int  // Page height, 0=no paging
 	Mode7      bool // true for BBC mode 7 Teletext
@@ -54,26 +56,32 @@ type TableStyle struct {
 
 // Plain Table Style
 var Plain = TableStyle{
-	HSep:   '=',
-	HLine:  '=',
-	CSep:   ' ',
-	Border: false,
+	HSep:      '=',
+	HLine:     '=',
+	Separator: true,
+	HCSep:     ' ',
+	CSep:      ' ',
+	Border:    false,
 }
 
 // SQL Table Style
 var SQL = TableStyle{
-	HSep:   '+',
-	HLine:  '-',
-	CSep:   '|',
-	Border: true,
+	HSep:      '+',
+	HLine:     '-',
+	Separator: true,
+	HCSep:     '|',
+	CSep:      '|',
+	Border:    true,
 }
 
 // BBC Mode 8 - i.e. for the BBC Master 128 ROM
 var MODE7 = TableStyle{
-	ShowTitle:  true,  // Show table title
-	HSep:       0,     // no separator
-	HLine:      0,     // no separator
-	CSep:       0,     // no column separator as we replace it
+	ShowTitle:  true, // Show table title
+	HSep:       0,    // no separator
+	HLine:      0,    // no separator
+	Separator:  false,
+	CSep:       0, // no column separator as we replace it
+	HCSep:      ' ',
 	Border:     false, // no border
 	PageHeight: 19,    // Mode7 page height minus title & header
 	Mode7:      true,  // Flag as Mode7
@@ -104,6 +112,16 @@ func (t *TableStyle) WriteCSep(o *ResultWriter) error {
 	return nil
 }
 
+func (t *TableStyle) WriteHCSep(o *ResultWriter) error {
+	if t != nil && t.Border {
+		err := write(o, t.HCSep)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t *TableStyle) WriteHSep(o *ResultWriter) error {
 	if t != nil && t.Border {
 		err := write(o, t.HSep)
@@ -122,39 +140,43 @@ func (t *TableStyle) WriteBorder(o *ResultWriter, tab *Table) error {
 }
 
 func (t *TableStyle) WriteSeparator(o *ResultWriter, tab *Table) error {
-	err := t.WriteHSep(o)
-	if err != nil {
-		return err
-	}
+	if t.Separator {
+		err := t.WriteHSep(o)
+		if err != nil {
+			return err
+		}
 
-	for i, h := range tab.Headers {
-		if i > 0 {
-			err := write(o, t.HSep)
+		for i, h := range tab.Headers {
+			if i > 0 {
+				err := write(o, t.HSep)
+				if err != nil {
+					return err
+				}
+			}
+
+			var b []byte
+			for i := 0; i < h.Width; i++ {
+				b = append(b, t.HLine)
+			}
+			_, err = o.Write(b)
 			if err != nil {
 				return err
 			}
 		}
 
-		var b []byte
-		for i := 0; i < h.Width; i++ {
-			b = append(b, t.HLine)
-		}
-		_, err = o.Write(b)
+		err = t.WriteHSep(o)
 		if err != nil {
 			return err
 		}
+
+		return write(o, '\n')
 	}
 
-	err = t.WriteHSep(o)
-	if err != nil {
-		return err
-	}
-
-	return write(o, '\n')
+	return nil
 }
 
 func (t *TableStyle) VisitHeaders(o *ResultWriter, v func(o *ResultWriter) error) error {
-	err := t.WriteCSep(o)
+	err := t.WriteHCSep(o)
 	if err != nil {
 		return err
 	}
@@ -164,12 +186,23 @@ func (t *TableStyle) VisitHeaders(o *ResultWriter, v func(o *ResultWriter) error
 		return err
 	}
 
-	err = t.WriteCSep(o)
+	err = t.WriteHCSep(o)
 	if err != nil {
 		return err
 	}
 
 	return write(o, '\n')
+}
+
+func (t *TableStyle) VisitHeader(o *ResultWriter, i int, v func(o *ResultWriter) error) error {
+	if i > 0 && t.HCSep > 0 {
+		err := write(o, t.HCSep)
+		if err != nil {
+			return err
+		}
+	}
+
+	return v(o)
 }
 
 func (t *TableStyle) VisitRow(tab *Table, r *Row, o *ResultWriter, v func(t *Table, r *Row, o *ResultWriter) error) error {
@@ -382,7 +415,7 @@ func (t *Table) WriteHeader(out *ResultWriter) error {
 
 	err = t.Style.VisitHeaders(out, func(o *ResultWriter) error {
 		for i, h := range t.Headers {
-			err := t.Style.VisitCell(o, i, func(o *ResultWriter) error {
+			err := t.Style.VisitHeader(o, i, func(o *ResultWriter) error {
 				return h.append(o, h.Label)
 			})
 			if err != nil {

@@ -70,6 +70,7 @@ func (s *Server) departures(r *ShellRequest) error {
 	t1.Headers[0].Width = 4
 	t1.Headers[1].Width = 17
 	t1.Headers[2].Width = 4
+	t1.Headers[2].Align = util.Right
 
 	include := true
 	for _, s := range sr.Services {
@@ -102,6 +103,16 @@ func (s *Server) departures(r *ShellRequest) error {
 	if t1.Style.Mode7 {
 		// Our rows are double height
 		t1.Callback.TableRow = doubleRow
+		t1.Callback.TableHeader = func(o *util.ResultWriter) error {
+			var err error
+			for i := 0; i < 2; i++ {
+				_, err = o.Write(blueDoubleHeight)
+				if err == nil {
+					err = t1.WriteHeader(o)
+				}
+			}
+			return err
+		}
 
 		// Only halve the height for the first table, the others in this request will pick it up
 		t1.Style.PageHeight = t1.Style.PageHeight / 2
@@ -120,99 +131,6 @@ func (s *Server) departures(r *ShellRequest) error {
 	}
 
 	return t1.Write(w)
-
-	/*
-		header := true
-		r := NewResult(func(p *Page) {
-			x := (40 - len(stationName)) >> 1
-			for y := 1; y <= 2; y++ {
-				p.Tab(0, y).
-					AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
-					Tab(x, y).
-					Append(stationName)
-
-				if header {
-					p.Tab(0, y+2).
-						AppendChars(AlphaBlue, NewBackground, AlphaWhite, DoubleHeight).
-						Append("Due Destination       Plat  Expctd")
-				}
-			}
-		})
-
-		include := true
-		for _, s := range sr.Services {
-			if include {
-				processDeparture(crs, sr, s, r)
-				if r.PageCount() > MAX_PAGES {
-					include = false
-				}
-			}
-		}
-
-		header = false
-		for _, m := range sr.Messages {
-			//if m.Active {
-			s := m.Message
-
-			// Strip out More detail... text
-			for _, v := range stripMore {
-				i := strings.Index(s, v)
-				if i > -1 {
-					s = s[:i]
-				}
-			}
-			for _, v := range stripHtml {
-				s = strings.ReplaceAll(s, v, "")
-			}
-
-			var v []string
-			for len(s) > 37 {
-				j := 37
-				for s[j] != ' ' && j > 0 {
-					j = j - 1
-				}
-				if j <= 0 {
-					// Just split - should never happen
-					v = append(v, s[:37])
-					s = s[37:]
-				} else {
-					v = append(v, s[:j])
-					if (j + 1) >= len(s) {
-						s = ""
-					} else {
-						s = s[j+1:]
-					}
-				}
-			}
-			if s != "" {
-				v = append(v, s)
-			}
-
-			p := r.AddPage()
-			for y, s := range v {
-				for i := 0; i < 2; i++ {
-					p.Tab(0, 5+(2*y)+i).
-						AppendChar(DoubleHeight).
-						Append(s)
-				}
-			}
-			//}
-		}
-
-		// Now run through and add page numering if required
-		pageCount := len(r.Pages)
-		if pageCount > 1 {
-			for pn, p := range r.Pages {
-				s := fmt.Sprintf("%d/%d", pn+1, pageCount)
-				p.Tab(39-len(s), 1).
-					Append(s).
-					Tab(39-len(s), 2).
-					Append(s)
-			}
-		}
-
-		return cmd.EmptyResponse(0).AppendPages(r)
-	*/
 }
 
 func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *util.Table) {
@@ -369,14 +287,16 @@ func boardHeader(t1 *util.Table, stationName string) func(*util.Pagination, *uti
 		if page.PageCount > 1 {
 			title = fmt.Sprintf(" %d/%d", page.PageNo, page.PageCount)
 		}
-		w := (page.PageWidth - len(title) - len(stationName) - 1) / 2
+		w1 := page.PageWidth - len(title) - len(stationName) - 1
+		w := w1 / 2
 		if t1.Style.Mode7 {
-			w = w - len(blueDoubleHeight)
+			w -= len(blueDoubleHeight)
+			w1--
 		}
 		if w < 0 {
 			w = 0
 		}
-		title = fmt.Sprintf(fmt.Sprintf("%%%ds%%s%%s\n", w), "", stationName, title)
+		title = fmt.Sprintf(fmt.Sprintf("%%%ds%%s%%%ds%%s\n", w, w1-w), "", stationName, "", title)
 
 		n := 1
 		if t1.Style.Mode7 {
@@ -400,15 +320,12 @@ func boardHeader(t1 *util.Table, stationName string) func(*util.Pagination, *uti
 }
 
 func doubleRow(t *util.Table, r *util.Row, o *util.ResultWriter) error {
-	err := o.WriteBytes(DoubleHeight)
-	if err == nil {
-		err = t.WriteRow(t, r, o)
-	}
-	if err == nil {
-		err = o.WriteBytes(DoubleHeight)
-	}
-	if err == nil {
-		err = t.WriteRow(t, r, o)
+	var err error
+	for i := 0; i < 2; i++ {
+		err = o.WriteBytes(DoubleHeight, ' ')
+		if err == nil {
+			err = t.WriteRow(t, r, o)
+		}
 	}
 	return err
 }

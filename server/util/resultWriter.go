@@ -76,10 +76,10 @@ func (r *ResultWriter) Write(b []byte) (int, error) {
 }
 
 var (
-	stx = []byte{2, 13, 10}  // ASCII STX Start TeXt - mark start of result
-	etx = []byte{3, 13, 10}  // ASCII ETX End TeXT - mark end of result
-	gs  = []byte{29, 13, 10} // ASCII Group Separator - mark new table
-	rs  = []byte{30, 13, 10} // ASCII Record Separator - mark new page in table
+	stx = []byte{2}  // ASCII STX Start TeXt - mark start of result
+	etx = []byte{3}  // ASCII ETX End TeXT - mark end of result
+	gs  = []byte{29} // ASCII Group Separator - mark new table
+	rs  = []byte{30} // ASCII Record Separator - mark new page in table
 )
 
 func (r *ResultWriter) GroupSeparator() error {
