@@ -169,6 +169,7 @@
 
     RTS
 
+    // Class 165 from https://zxnet.co.uk/teletext/gallery/index.php?gallery=gallery2
 .bannerStart
     INCBIN "rom/banner.m7"
 .bannerEnd
