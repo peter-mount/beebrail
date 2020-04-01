@@ -8,6 +8,7 @@ ASCII_GS    = 29
 ASCII_RS    = 30
 
 .dial
+    JSR banner
     JSR showPrompt
 
     JSR useCommandRow               ; Show dialing logo
@@ -15,9 +16,19 @@ ASCII_RS    = 30
     LDY #>dialingText
     JSR writeString
 
-    JSR cls
+    LDA #0                          ; Viewport to show dial progress
+    LDX #22
+    LDY #24
+    JSR setTextViewPort
 
+    LDX #16                         ; Enable scrolling
     LDY #0
+    JSR vdu23
+
+    LDA #12                         ; Clear new viewport
+    JSR oswrch
+
+    LDY #0                          ; Start dialing
 .dial1
     LDA dialText,y
     BNE dial2
