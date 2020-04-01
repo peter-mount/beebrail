@@ -18,7 +18,8 @@ type ShellRequest struct {
 }
 
 func (r *ShellRequest) ResultWriter() *util.ResultWriter {
-	return util.NewResultWriter(r.Writer)
+	return util.NewResultWriter(r.Writer).
+		StxEtx(r.context.IsStxEtx())
 }
 
 func (r *ShellRequest) Print(v ...interface{}) *ShellRequest {

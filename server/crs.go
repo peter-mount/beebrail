@@ -30,8 +30,7 @@ func (s *Server) crs(r *ShellRequest) error {
 	}
 
 	w := r.ResultWriter().
-		Title("CRS %s", crs).
-		StxEtx(ctx.IsStxEtx())
+		Title("CRS %s", crs)
 	defer w.Close()
 
 	t := r.NewTable().

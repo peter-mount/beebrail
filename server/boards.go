@@ -54,8 +54,7 @@ func (s *Server) departures(r *ShellRequest) error {
 	}
 
 	w := r.ResultWriter().
-		Title("CRS %s", crs).
-		StxEtx(ctx.IsStxEtx())
+		Title("CRS %s", crs)
 	defer w.Close()
 
 	t1 := r.NewTable().

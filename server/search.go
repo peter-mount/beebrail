@@ -23,8 +23,7 @@ func (s *Server) search(r *ShellRequest) error {
 	}
 
 	w := r.ResultWriter().
-		Title("Search results").
-		StxEtx(ctx.IsStxEtx())
+		Title("Search results")
 	defer w.Close()
 
 	if ctx.IsAPI() {
