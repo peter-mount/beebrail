@@ -80,6 +80,16 @@
     LDA #12
     JMP oswrch
 
+; osasci but for unix line feed
+.osunixlf
+    CMP #10
+    BNE osunixlf0
+    LDA #13
+    JSR oswrch
+    LDA #10
+.osunixlf0
+    JMP oswrch
+
 ; tab(x,y)
 .tab
     LDA #30
@@ -91,9 +101,7 @@
 
 ; Main home page
 .homePage
-    JSR useEntireScreen
-    LDA #12
-    JSR oswrch
+    JSR cls
     LDX #0
     LDY #homePageEnd-homePageStart
 .homePageLoop

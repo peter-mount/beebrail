@@ -10,6 +10,12 @@
     LDX pagedRomID                  ; Use our ROM number
     JMP osbyte
 
+.showPrompt
+    JSR usePrompt
+    LDX #<prompt
+    LDY #>prompt
+    JSR writeString
+
 ; The main language entry point
 .language
     CMP #&01                        ; Accept A=1 only
@@ -43,14 +49,13 @@
 
     CLI                             ; Enable IRQ's
 
+    JSR dial                        ; Dial the server
+
     JSR homePage                    ; show home page
 
 ; cmdLine editor
 .cmdLine
-    JSR usePrompt
-    LDX #<prompt
-    LDY #>prompt
-    JSR writeString
+    JSR showPrompt
     JSR useCommandRow               ; Use command row only
     LDA #12                         ; Clear command row
     JSR oswrch

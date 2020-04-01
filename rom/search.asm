@@ -12,20 +12,28 @@
     INY
     LDA inputBuffer,Y
     STA currentStation+2
-    LDA #13                         ; Char 4 is always terminator
+    LDA #10                         ; Char 4 is always terminator
     STA currentStation+3
 .departures0                        ; reload departures using currentStation
-    LDY #3                          ; so copy currentStation into inputBuffer
+    ; FIXME optimise this
+    LDA #'d':STA inputBuffer
+    LDA #'e':STA inputBuffer+1
+    LDA #'p':STA inputBuffer+2
+    LDA #'a':STA inputBuffer+3
+    LDA #'r':STA inputBuffer+4
+    LDA #'t':STA inputBuffer+5
+    LDA #' ':STA inputBuffer+6
+    LDY #0                          ; so copy currentStation into inputBuffer
     LDX #4
 .departures1
     LDA currentStation,Y
-    STA inputBuffer,Y
-    DEY
+    STA inputBuffer+7,Y
+    INY
     DEX
     BNE departures1
+
     LDY #0
 
-    LDA #'D'                        ; Command 'D'
     JSR searchMode7
     JSR rotatePages                 ; rotate pages or 60s are up
     BRA departures0                 ; reload pages
@@ -46,8 +54,10 @@
 ;   inputBuffer containing the search parameter to send
 ;
 .searchMode7
-    JSR startCommand
+    JSR resetCommandBuffer
     JSR appendInputBuffer           ; Add command line to payload
+    LDA #10
+    JSR appendCommand
 
     JSR useCommandRow               ; Show searching logo
     LDX #<searchingText

@@ -2,6 +2,94 @@
 ; * The 6502 protocol client
 ; ********************************************************************************
 
+ASCII_STX   = 2
+ASCII_ETX   = 3
+ASCII_GS    = 29
+ASCII_RS    = 30
+
+.dial
+    JSR showPrompt
+
+    JSR useCommandRow               ; Show dialing logo
+    LDX #<dialingText
+    LDY #>dialingText
+    JSR writeString
+
+    JSR cls
+
+    LDY #0
+.dial1
+    LDA dialText,y
+    BNE dial2
+    RTS
+.dial2
+    INY
+    CMP #1
+    BEQ dialWaitSecond
+    JSR serWrite
+    CMP #10
+    BNE dial1
+.dailWait
+    LDA #100
+    LDX #0
+    BRA dialWait0
+.dialWaitSecond
+    LDA #0
+    LDX #1
+.dialWait0
+    STA currentStation              ; Store timer val
+    STX currentStation+1
+    STY totalPages                  ; Store Y
+
+    STZ tmpaddr                     ; Reset timer
+    STZ tmpaddr+1
+    STZ tmpaddr+2
+    STZ tmpaddr+3
+    STZ tmpaddr+4
+    JSR writeTimer
+
+.dialWait1
+    LDA #&91                        ; Read character from buffer
+    LDX #1                          ; RS423 input buffer
+    JSR osbyte
+    BCS dialWait2                   ; No data read so skip
+    TYA                             ; Write received char to screen
+    JSR oswrch
+
+.dialWait2
+    JSR readTimer
+
+    LDA tmpaddr+1
+    CMP currentStation+1
+    BMI dialWait1
+    LDA tmpaddr
+    CMP currentStation
+    BMI dialWait1                   ; Loop until timer hit
+
+    LDY totalPages
+    BRA dial1
+
+.readTimer
+    LDA #3                          ; Read timer
+    BRA readWriteTimer
+.writeTimer
+    LDA #4
+.readWriteTimer
+    LDX #<tmpaddr
+    LDY #>tmpaddr
+    JMP osword
+
+.dialingText
+    EQUS 12, 131, 157, 129, "Dialing...", 0
+
+.dialText
+    EQUS "+++", 1
+    EQUS "ATH", 13, 10
+    EQUS "ATZ", 13, 10
+    EQUS "ATDTlocalhost:8082", 13, 10
+    EQUS "mode bbc api", 13, 10
+    EQUB 0
+
 ; internal, resets the command buffer pointer
 .resetCommandBuffer
     PHA                         ; Save A & reset buffer
@@ -51,6 +139,14 @@
     JSR incBufferPos            ; Skip 2 bytes for the buffer size
     BRA incBufferPos            ; We'll set these up later
 
+; Read next byte from command buffer
+.readCommandBuffer
+    LDA (bufferPos)
+    PHA
+    JSR incBufferPos
+    PLA
+    RTS
+
 ; Append a byte to the command Buffer
 ; Entry:
 ;   A   Value to append
@@ -72,24 +168,6 @@
     RTS
 
 .sendCommand
-    SEC                         ; Set command length
-    LDA bufferPos               ; tmpaddr = bufferPos - page
-    SBC page
-    STA tmpaddr
-    LDA bufferPos+1
-    SBC page+1
-    STA tmpaddr+1
-
-    SEC                         ; command length = tmpaddr - 4
-    LDA tmpaddr
-    SBC #4
-    LDY #2
-    STA (page),Y
-    LDA tmpaddr+1
-    SBC #0
-    INY
-    STA (page),Y
-
     LDA page                    ; Set sendPos to the start of the buffer
     STA sendPos
     LDA page+1
@@ -97,42 +175,24 @@
 
 .sendCommandLoop
     LDA (sendPos)               ; get current char
-    TAY                         ; Send to serial buffer
-    LDA #$8A
-    LDX #2
-    JSR osbyte
-    BCS sendCommandLoop         ; Buffer was full
+    JSR serWrite
 
     JSR incSendPos              ; Add 1 to sendPos
     JSR bufferPosSendPosEqual   ; Check for end of buffer
     BNE sendCommandLoop
 
     JSR resetCommandBuffer      ; Now wait for a response
+    JSR readBuffer
 
-    LDX #4                      ; Header size
-    LDY #0
-    JSR readBuffer              ; read the header
-
-    LDY #2                      ; XY = Payload size
-    LDA (page),Y
-    TAX
-    INY
-    LDA (page),Y
-    TAY
-    JSR readBuffer              ; read the payload
-
-    LDY #0                      ; check returned command is the same
-    LDA (page),y
-    CMP lastCommand
-    BEQ readBufferCheckStatus
+    ; FIXME this needs error handling
+    RTS
+    ;LDY #0                      ; check response code
+    ;LDA (page),y
+    ;CMP lastCommand
+    ;BEQ readBufferCheckStatus
 .errProtocol
     BRK                         ; fail Protocol error
     EQUS 1,"Protocol error",0
-
-.readBufferCheckStatus
-    LDY #1                      ; Read response status
-    LDA (page),Y
-    BNE readBufferError         ; fail on error
 
 ; sets sendPos to the start of the payload
 .setSendPosPayload
@@ -162,20 +222,33 @@
     STZ inputBuffer,X               ; Append terminating 0
     JMP inputBuffer                 ; Invoke break
 
-; read XY bytes from RS423 and append to the buffer
+; read a table from RS423
 .readBuffer
-    CLC                         ; sendPos = XY + bufferPos
-    TXA
-    ADC bufferPos
-    STA sendPos
-    TYA
-    ADC bufferPos+1
-    STA sendPos+1
-.readBufferLoop
-    JSR serRead                 ; Read byte
-    JSR appendCommand           ; Append to buffer
-    JSR bufferPosSendPosEqual   ; loop until all read
-    BNE readBufferLoop
+    JSR serRead                     ; Wait until we get STX
+    CMP #ASCII_STX
+    BNE readBuffer
+    JSR appendCommand
+.readBuffer0
+    JSR serRead
+    PHA
+    JSR appendCommand
+    PLA
+    CMP #ASCII_ETX                  ; Loop until ETX
+    BNE readBuffer0
+    RTS
+
+.serWrite
+    PHA
+    PHX
+    PHY
+    TAY                             ; Send to serial buffer
+    LDA #$8A
+    LDX #2
+    JSR osbyte
+    PLY
+    PLX
+    PLA
+    BCS serWrite                    ; Buffer was full
     RTS
 
 ; Receive
@@ -256,69 +329,27 @@
 
 ; Shows mode7 response
 .showResponse
-    STZ curPage                     ; reset to first page
-    LDA (sendPos)                   ; set totalPages from result
-    STA totalPages
+    JSR resetCommandBuffer
 
 ; Redisplay the current page
 .displayPage
-    LDA curPage                     ; Check page number
-    CMP totalPages                  ; If >= totalPages then reset
-    BMI displayPage0
-    STZ curPage
-.displayPage0
-    LDA curPage                     ; Set Y to position in header to page offset for the required page
-    CLC
-    ROL A                           ; *2
-    ADC #1                          ; +1 for page count
-    TAY
-
-    CLC                             ; pageStart = sendPos + page offset
-    LDA (sendPos),Y
-    ADC sendPos
-    STA pageStart
-    INY
-    LDA (sendPos),Y
-    ADC sendPos+1
-    STA pageStart+1
-
-    CLC                             ; pageEnd = sendPos + page offset of next page
-    INY
-    LDA (sendPos),Y
-    ADC sendPos
-    STA pageEnd
-    INY
-    LDA (sendPos),Y
-    ADC sendPos+1
-    STA pageEnd+1
-
-.refreshPage
-    LDA pageStart                   ; copy page start
-    STA tmpaddr
-    LDA pageStart+1
-    STA tmpaddr+1
-
     JSR cls                         ; Clear screen
+.displayPage0
+    JSR readCommandBuffer
+    CMP #ASCII_STX                  ; STX Start so skip
+    BEQ displayPage0
+    CMP #ASCII_ETX                  ; ETX so stop but reset the buffer
+    BEQ displayPage1
+    CMP #ASCII_GS                   ; GS new table so stop
+    BEQ displayPage2
+    CMP #ASCII_RS                   ; RS new page in table so stop
+    BEQ displayPage2
+    JSR osunixlf                    ; Write char
+    BRA displayPage0
 .displayPage1
-    LDA tmpaddr                     ; Check for end of page
-    CMP pageEnd
-    BNE displayPage2
-    LDA tmpaddr+1
-    CMP pageEnd+1
-    BNE displayPage2
-    RTS
+    JSR resetCommandBuffer
 .displayPage2
-    LDA (tmpaddr)
-    JSR oswrch
-
-    CLC
-    LDA tmpaddr
-    ADC #1
-    STA tmpaddr
-    LDA tmpaddr+1
-    ADC #0
-    STA tmpaddr+1
-    BRA displayPage1
+    RTS
 
 ; rotate pages every 5 seconds
 .rotatePages
