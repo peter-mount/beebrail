@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"github.com/peter-mount/beebrail/server/util"
 )
 
 func (s *Server) search(r *ShellRequest) error {
@@ -34,9 +35,42 @@ func (s *Server) search(r *ShellRequest) error {
 		AddHeaders("CRS", "Station")
 
 	for _, res := range results {
+		col := ""
+		if t.Style.Mode7 {
+			col = cyan
+			if res.Crs == param {
+				col = white
+			}
+		}
 		t.NewRow().
-			Append(res.Crs).
-			Append(res.Name)
+			Cell(&util.Cell{
+				Label:  res.Crs,
+				Prefix: col,
+			}).
+			Cell(&util.Cell{
+				Label:  res.Name,
+				Prefix: col,
+			})
+	}
+
+	if t.Style.Mode7 {
+		t.Callback.TableHeader = func(o *util.ResultWriter) error {
+			err := o.WriteBytes(AlphaBlue, NewBackground, AlphaWhite)
+			if err == nil {
+				err = t.WriteHeader(o)
+			}
+			return err
+		}
+
+		t.Callback.TableRow = func(t *util.Table, r *util.Row, o *util.ResultWriter) error {
+			err := o.WriteString("  ")
+			if err == nil {
+				err = t.WriteRow(t, r, o)
+			}
+			return nil
+		}
+
+		t.Style.HCSep = AlphaWhite
 	}
 
 	return t.Write(w)

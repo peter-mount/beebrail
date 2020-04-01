@@ -214,6 +214,7 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 
 var (
 	white        = string([]byte{AlphaWhite})
+	cyan         = string([]byte{AlphaCyan})
 	yellow       = string([]byte{AlphaYellow})
 	steadyWhite  = string([]byte{' ', AlphaWhite})
 	steadyGreen  = string([]byte{' ', AlphaGreen})

@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"github.com/peter-mount/beebrail/server/util"
 	"log"
 	"strings"
 )
@@ -42,12 +43,41 @@ func (s *Server) crs(r *ShellRequest) error {
 		}
 
 		for _, tpl := range response.Tiploc {
-			t.NewRow().
+			r := t.NewRow().
 				Append(tpl.Crs).
 				Append(tpl.Tiploc).
 				Append(tpl.Toc).
 				Append(tpl.Name)
+			if t.Style.Mode7 {
+				col := cyan
+				if tpl.Crs == crs {
+					col = white
+				}
+				for i := 0; i < 4; i++ {
+					r.GetCell(i).Prefix = col
+				}
+			}
 		}
+	}
+
+	if t.Style.Mode7 {
+		t.Callback.TableHeader = func(o *util.ResultWriter) error {
+			err := o.WriteBytes(AlphaBlue, NewBackground, AlphaWhite)
+			if err == nil {
+				err = t.WriteHeader(o)
+			}
+			return err
+		}
+
+		t.Callback.TableRow = func(t *util.Table, r *util.Row, o *util.ResultWriter) error {
+			err := o.WriteString("  ")
+			if err == nil {
+				err = t.WriteRow(t, r, o)
+			}
+			return nil
+		}
+
+		t.Style.HCSep = AlphaWhite
 	}
 
 	_ = t.Write(w)
