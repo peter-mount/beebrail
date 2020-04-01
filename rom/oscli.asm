@@ -4,7 +4,8 @@
 
 ; unknown oscli command (&F2),Y holds the start of the command
 .oscliHandler
-    PHA:PHY                         ; Save A & Y
+    PHA                             ; Save A & Y
+    PHY
     LDX #0
 .oscliHandlerLoop
     LDA oscliTable,X
@@ -12,15 +13,18 @@
     BEQ oscliHandlerFound           ; 0 so we have found our command
     CMP (&F2),Y
     BNE oscliHandlerSkip            ; Skip entry
-    INY:INX                         ; next char
+    INY                             ; next char
+    INX
     BNE oscliHandlerLoop
 
 .oscliHandlerFail
-    PLY:PLA                         ; Restore A & Y as its unclaimed
+    PLY                             ; Restore A & Y as its unclaimed
+    PLA
     RTS
 
 .oscliHandlerFound
-    PLA:PLA                         ; Dump original A & Y to bitbucket
+    PLA                             ; Dump original A & Y to bitbucket
+    PLA
     INX                             ; Skip to address
     JSR oscliHandlerExec            ; Invoke command
     LDA #0                          ; Claim command
@@ -30,8 +34,11 @@
     INX
     LDA oscliTable,X
     BNE oscliHandlerSkip            ; Loop until 0
-    INX:INX:INX                     ; Skip 0 & address
-    PLY:PHY                         ; Get initial Y back
+    INX                             ; Skip 0 & address
+    INX
+    INX
+    PLY                             ; Get initial Y back
+    PHY
     BRA oscliHandlerLoop            ; Resume loop
 
 ; As there's no JSR (oscliTable,X)

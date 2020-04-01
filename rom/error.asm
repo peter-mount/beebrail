@@ -1,12 +1,13 @@
 ; ********************************************************************************
-; ********************************************************************************
-
 ; Handle errors from BRK instructions.
+;
 ; Errors raised with:
 ;   BRK
 ;   EQUB error code (unused)
 ;   EQUS error string
 ;   BRK or EQUB 0 to terminate string
+; ********************************************************************************
+
 .errorHandler
     LDX #&FF                        ; Reset the stack
     TXS

@@ -216,7 +216,3 @@
     EQUS "SEARCH", 0        : EQUW genericCommand   ; Search crs by name
     EQUS "STATUS", 0        : EQUW status           ; Debug status
     EQUB &FF                                        ; Table terminator
-
-    INCLUDE "rom/error.asm"
-    INCLUDE "rom/status.asm"
-    INCLUDE "rom/search.asm"

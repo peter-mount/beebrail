@@ -46,5 +46,3 @@
         ;EQUB &08:EQUW oswordHandler         ; 08 Unrecognised OSWORD
         ;EQUB &27:EQUW serviceReset          ; 27 Reset
         EQUB 0                              ; end of table
-
-        INCLUDE "rom/oscli.asm"
