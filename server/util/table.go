@@ -81,7 +81,7 @@ var MODE7 = TableStyle{
 	HLine:      0,    // no separator
 	Separator:  false,
 	CSep:       0, // no column separator as we replace it
-	HCSep:      ' ',
+	HCSep:      0,
 	Border:     false, // no border
 	PageHeight: 19,    // Mode7 page height minus title & header
 	Mode7:      true,  // Flag as Mode7
@@ -416,6 +416,14 @@ func (t *Table) WriteHeader(out *ResultWriter) error {
 	err = t.Style.VisitHeaders(out, func(o *ResultWriter) error {
 		for i, h := range t.Headers {
 			err := t.Style.VisitHeader(o, i, func(o *ResultWriter) error {
+				p := h.Prefix
+				if p != "" {
+					err := o.WriteString(p)
+					if err != nil {
+						return err
+					}
+				}
+
 				return h.append(o, h.Label)
 			})
 			if err != nil {
@@ -458,7 +466,6 @@ func (t *Table) writeTable(out *ResultWriter) error {
 					}
 				}
 			}
-			t.pagination.NextRow()
 
 			if t.Callback.PageHeader != nil {
 				err := t.Callback.PageHeader(t.pagination, out)
@@ -474,6 +481,8 @@ func (t *Table) writeTable(out *ResultWriter) error {
 				}
 			}
 		}
+
+		t.pagination.NextRow()
 
 		if t.Callback.TableRow != nil {
 			err := t.Callback.TableRow(t, r, out)

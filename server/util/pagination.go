@@ -68,7 +68,7 @@ func (p *Pagination) AddPages(t *Table) *Pagination {
 
 // IsPageBreak returns true if we should break the table for a specific rowNum
 func (p *Pagination) IsPageBreak() bool {
-	return p.rowNum == 0
+	return p.rowNum == 0 || p.rowNum >= p.pageHeight
 }
 
 func (p *Pagination) NextPage() bool {

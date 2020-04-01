@@ -68,9 +68,13 @@ func (s *Server) departures(r *ShellRequest) error {
 
 	// Default minimum widths
 	t1.Headers[0].Width = 4
-	t1.Headers[1].Width = 17
+	t1.Headers[0].Prefix = " "
+	t1.Headers[1].Width = 16
+	t1.Headers[1].Prefix = " "
 	t1.Headers[2].Width = 4
 	t1.Headers[2].Align = util.Right
+	t1.Headers[3].Prefix = " "
+	t1.Headers[3].Align = util.Right
 
 	include := true
 	for _, s := range sr.Services {
@@ -158,8 +162,8 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 			dest = d.Name
 		}
 	}
-	if len(dest) > 17 {
-		dest = dest[:17]
+	if len(dest) > 16 {
+		dest = dest[:16]
 	}
 
 	// Platform, might be suppressed
@@ -182,11 +186,11 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 	} else if forecast.Delayed {
 		expected = "Delayed"
 		expectedColour = steadyRed
-	} else if l.Delay == 0 {
+	} else if l.Delay > -60 && l.Delay < 60 {
 		expected = "On Time"
 	} else if forecast.ET != nil {
 		expected = forecast.ET.String()
-		expected = expected[0:2] + expected[3:5] + " "
+		expected = expected[0:2] + expected[3:5]
 		// TODO if terminates here delay can show wrong as its using WTT not PTT in the calculation
 		//log.Println(forecast.Time(), l.Delay, forecast.ET, l.Times)
 		if l.Delay > 0 {
@@ -201,7 +205,7 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 		Append(expected)
 
 	if t.Style.Mode7 {
-		r.GetCell(0).Prefix = yellow
+		r.GetCell(0).Prefix = steadyYellow
 		r.GetCell(1).Prefix = white
 		r.GetCell(2).Prefix = yellow
 		r.GetCell(3).Prefix = expectedColour
