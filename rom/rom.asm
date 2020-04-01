@@ -52,12 +52,14 @@ inputBuffer = &700                      ; Page 7 for the command line input buff
         EQUS " Area51.dev", 0
 
 ; Core modules
-        INCLUDE "rom/writeString.asm"
+        INCLUDE "rom/banner.asm"
+        INCLUDE "rom/dialer.asm"
         INCLUDE "rom/hex.asm"
-        INCLUDE "rom/service.asm"
-        INCLUDE "rom/protocol.asm"
         INCLUDE "rom/language.asm"
+        INCLUDE "rom/protocol.asm"
         INCLUDE "rom/screen.asm"
+        INCLUDE "rom/service.asm"
+        INCLUDE "rom/writeString.asm"
 
 ; End of the rom.
 

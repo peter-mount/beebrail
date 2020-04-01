@@ -49,6 +49,8 @@
 
     CLI                             ; Enable IRQ's
 
+    JSR banner                      ; Display our splash page
+
     JSR dial                        ; Dial the server
 
     JSR homePage                    ; show home page
