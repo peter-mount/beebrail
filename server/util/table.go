@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -39,6 +38,7 @@ const (
 	Left   = iota // Left justify (default)
 	Center        // Center justify
 	Right         // Right justify
+	None          // No justification
 )
 
 // Table styling
@@ -94,7 +94,7 @@ func (t *Table) NewTable() *Table {
 	return t1
 }
 
-func (t *TableStyle) WriteCSep(o io.Writer) error {
+func (t *TableStyle) WriteCSep(o *ResultWriter) error {
 	if t != nil && t.Border {
 		err := write(o, t.CSep)
 		if err != nil {
@@ -104,7 +104,7 @@ func (t *TableStyle) WriteCSep(o io.Writer) error {
 	return nil
 }
 
-func (t *TableStyle) WriteHSep(o io.Writer) error {
+func (t *TableStyle) WriteHSep(o *ResultWriter) error {
 	if t != nil && t.Border {
 		err := write(o, t.HSep)
 		if err != nil {
@@ -114,14 +114,14 @@ func (t *TableStyle) WriteHSep(o io.Writer) error {
 	return nil
 }
 
-func (t *TableStyle) WriteBorder(o io.Writer, tab *Table) error {
+func (t *TableStyle) WriteBorder(o *ResultWriter, tab *Table) error {
 	if t.Border {
 		return t.WriteSeparator(o, tab)
 	}
 	return nil
 }
 
-func (t *TableStyle) WriteSeparator(o io.Writer, tab *Table) error {
+func (t *TableStyle) WriteSeparator(o *ResultWriter, tab *Table) error {
 	err := t.WriteHSep(o)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (t *TableStyle) WriteSeparator(o io.Writer, tab *Table) error {
 	return write(o, '\n')
 }
 
-func (t *TableStyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
+func (t *TableStyle) VisitHeaders(o *ResultWriter, v func(o *ResultWriter) error) error {
 	err := t.WriteCSep(o)
 	if err != nil {
 		return err
@@ -172,7 +172,26 @@ func (t *TableStyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
 	return write(o, '\n')
 }
 
-func (t *TableStyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) error {
+func (t *TableStyle) VisitRow(tab *Table, r *Row, o *ResultWriter, v func(t *Table, r *Row, o *ResultWriter) error) error {
+	err := t.WriteCSep(o)
+	if err != nil {
+		return err
+	}
+
+	err = v(tab, r, o)
+	if err != nil {
+		return err
+	}
+
+	err = t.WriteCSep(o)
+	if err != nil {
+		return err
+	}
+
+	return write(o, '\n')
+}
+
+func (t *TableStyle) VisitCell(o *ResultWriter, i int, v func(o *ResultWriter) error) error {
 	if i > 0 && t.CSep > 0 {
 		err := write(o, t.CSep)
 		if err != nil {
@@ -213,6 +232,14 @@ func (r *Row) End() *Table {
 	return r.parent
 }
 
+func (r *Row) IsEmpty() bool {
+	return len(r.cells) == 0
+}
+
+func (r *Row) GetCell(i int) *Cell {
+	return r.cells[i]
+}
+
 func (r *Row) Cell(v *Cell) *Row {
 	r.cells = append(r.cells, v)
 	return r
@@ -246,12 +273,12 @@ func (r *Row) Visit(f func(i int, h *Header, c *Cell) error) error {
 	return nil
 }
 
-func write(o io.Writer, v byte) error {
+func write(o *ResultWriter, v byte) error {
 	_, err := o.Write([]byte{v})
 	return err
 }
 
-func (h *Header) append(o io.Writer, v string) error {
+func (h *Header) append(o *ResultWriter, v string) error {
 	var f string
 	switch h.Align {
 	case Left:
@@ -260,6 +287,8 @@ func (h *Header) append(o io.Writer, v string) error {
 		f = "%%-%d.%ds"
 	case Right:
 		f = "%%%d.%ds"
+	case None:
+		return o.WriteString(v)
 	}
 
 	_, err := fmt.Fprintf(o, fmt.Sprintf(f, h.Width, h.Width), v)
@@ -324,7 +353,6 @@ func (t *Table) Write(out *ResultWriter) error {
 }
 
 func (t *Table) write(out *ResultWriter) error {
-
 	// Ugly but need this tables pageHeight here
 	t.pagination.pageHeight = t.Style.PageHeight
 
@@ -339,6 +367,7 @@ func (t *Table) write(out *ResultWriter) error {
 	}
 
 	if t.nextTable != nil {
+		t.pagination.Reset()
 		return t.nextTable.write(out)
 	}
 
@@ -351,9 +380,9 @@ func (t *Table) WriteHeader(out *ResultWriter) error {
 		return err
 	}
 
-	err = t.Style.VisitRow(out, func(o io.Writer) error {
+	err = t.Style.VisitHeaders(out, func(o *ResultWriter) error {
 		for i, h := range t.Headers {
-			err := t.Style.VisitCell(o, i, func(o io.Writer) error {
+			err := t.Style.VisitCell(o, i, func(o *ResultWriter) error {
 				return h.append(o, h.Label)
 			})
 			if err != nil {
@@ -379,7 +408,7 @@ func (t *Table) Pagination() *Pagination {
 func (t *Table) writeTable(out *ResultWriter) error {
 
 	for rowNum, r := range t.Rows {
-		if t.pagination.IsPageBreak(rowNum) {
+		if t.pagination.IsPageBreak() {
 			// Start new page
 			if t.pagination.NextPage() {
 				if rowNum > 0 {
@@ -396,6 +425,7 @@ func (t *Table) writeTable(out *ResultWriter) error {
 					}
 				}
 			}
+			t.pagination.NextRow()
 
 			if t.Callback.PageHeader != nil {
 				err := t.Callback.PageHeader(t.pagination, out)
@@ -412,37 +442,48 @@ func (t *Table) writeTable(out *ResultWriter) error {
 			}
 		}
 
-		err := t.Style.VisitRow(out, func(o io.Writer) error {
-			return r.Visit(func(i int, h *Header, c *Cell) error {
-				return t.Style.VisitCell(o, i, func(o io.Writer) error {
-					// FIXME this only works for multi line for tables of 1 column
-					for i, s := range strings.Split(c.Label, "\n") {
-						if i > 0 {
-							err := out.WriteBytes('\n')
-							if err != nil {
-								return err
-							}
-						}
-
-						if c.Prefix != "" {
-							s = c.Prefix + s
-						} else if h.Prefix != "" {
-							s = h.Prefix + s
-						}
-
-						err := h.append(o, s)
-						if err != nil {
-							return err
-						}
-					}
-					return nil
-				})
-			})
-		})
-		if err != nil {
-			return err
+		if t.Callback.TableRow != nil {
+			err := t.Callback.TableRow(t, r, out)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func (t *Table) WriteRow(_ *Table, r *Row, o *ResultWriter) error {
+	return t.Style.VisitRow(t, r, o, func(t *Table, r *Row, o *ResultWriter) error {
+		return r.Visit(func(i int, h *Header, c *Cell) error {
+			return t.Style.VisitCell(o, i, func(o *ResultWriter) error {
+				// FIXME this only works for multi line for tables of 1 column
+				for i, s := range strings.Split(c.Label, "\n") {
+					if i > 0 {
+						err := o.WriteBytes('\n')
+						if err != nil {
+							return err
+						}
+					}
+
+					p := c.Prefix
+					if p == "" && h.Prefix != "" {
+						p = h.Prefix
+					}
+					if p != "" {
+						err := o.WriteString(p)
+						if err != nil {
+							return err
+						}
+					}
+
+					err := h.append(o, s)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+		})
+	})
 }

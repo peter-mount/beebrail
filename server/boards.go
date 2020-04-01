@@ -72,9 +72,6 @@ func (s *Server) departures(r *ShellRequest) error {
 	t1.Headers[1].Width = 17
 	t1.Headers[2].Width = 4
 
-	// Page header with Station Name
-	t1.Callback.PageHeader = boardHeader(t1, stationName)
-
 	include := true
 	for _, s := range sr.Services {
 		if include {
@@ -87,18 +84,40 @@ func (s *Server) departures(r *ShellRequest) error {
 	}
 
 	t2 := t1.NewTable().
-		AddHeader("Message")
+		Header(&util.Header{Label: "Message", Align: util.None})
+
+	for rowNum, m := range sr.Messages {
+		processMessage(rowNum, m, t2)
+	}
+
+	// Page header with Station Name on each page
+	t1.Callback.PageHeader = boardHeader(t1, stationName)
+	t2.Callback.PageHeader = t1.Callback.PageHeader
 
 	// No table headers for message pages
 	t2.Callback.TableHeader = func(o *util.ResultWriter) error {
 		return o.WriteString("\n")
 	}
 
-	// We want 1 message per page
-	t2.Style.PageHeight = 1
+	// Mode 7 uses double height rows
+	if t1.Style.Mode7 {
+		// Our rows are double height
+		t1.Callback.TableRow = doubleRow
 
-	for _, m := range sr.Messages {
-		processMessage(m, t2)
+		// Only halve the height for the first table, the others in this request will pick it up
+		t1.Style.PageHeight = t1.Style.PageHeight / 2
+	}
+
+	// Empty row marks next message
+	t2.Callback.TableRow = func(t *util.Table, r *util.Row, o *util.ResultWriter) error {
+		if r.IsEmpty() {
+			t.Pagination().Reset()
+			return nil
+		} else if t.Style.Mode7 {
+			return doubleRow(t, r, o)
+		} else {
+			return t.WriteRow(t, r, o)
+		}
 	}
 
 	return t1.Write(w)
@@ -258,27 +277,21 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 		}
 	}
 
-	t.NewRow().
-		Cell(&util.Cell{
-			Label:  tm,
-			Prefix: dblWhite,
-		}).
-		Cell(&util.Cell{
-			Label:  dest,
-			Prefix: white,
-		}).
-		Cell(&util.Cell{
-			Label:  plat,
-			Prefix: yellow,
-		}).
-		Cell(&util.Cell{
-			Label:  expected,
-			Prefix: expectedColour,
-		})
+	r := t.NewRow().
+		Append(tm).
+		Append(dest).
+		Append(plat).
+		Append(expected)
+
+	if t.Style.Mode7 {
+		r.GetCell(0).Prefix = yellow
+		r.GetCell(1).Prefix = white
+		r.GetCell(2).Prefix = yellow
+		r.GetCell(3).Prefix = expectedColour
+	}
 }
 
 var (
-	dblWhite     = string([]byte{DoubleHeight, AlphaYellow})
 	white        = string([]byte{AlphaWhite})
 	yellow       = string([]byte{AlphaYellow})
 	steadyWhite  = string([]byte{' ', AlphaWhite})
@@ -288,7 +301,13 @@ var (
 	flashYellow  = string([]byte{Flash, AlphaYellow})
 )
 
-func processMessage(m *darwind3.StationMessage, t *util.Table) {
+func processMessage(rowNum int, m *darwind3.StationMessage, t *util.Table) {
+
+	// Blank line to mark new page
+	if rowNum > 0 {
+		t.NewRow()
+	}
+
 	s := m.Message
 
 	// Strip out More detail... text
@@ -306,9 +325,8 @@ func processMessage(m *darwind3.StationMessage, t *util.Table) {
 	re := regexp.MustCompile("(<a.+/a>)")
 	msg := re.ReplaceAllString(s, "")
 
-	var v []string
 	for _, s := range strings.Split(msg, "\n") {
-		s = strings.Trim(s, " ")
+		s = strings.TrimSpace(s)
 		for len(s) > 37 {
 			j := 37
 			for s[j] != ' ' && j > 0 {
@@ -316,10 +334,12 @@ func processMessage(m *darwind3.StationMessage, t *util.Table) {
 			}
 			if j <= 0 {
 				// Just split - should never happen
-				v = append(v, s[:37])
+				appendMessageLine(t, s[:37])
+
 				s = s[37:]
 			} else {
-				v = append(v, s[:j])
+				appendMessageLine(t, s[:j])
+
 				if (j + 1) >= len(s) {
 					s = ""
 				} else {
@@ -327,14 +347,17 @@ func processMessage(m *darwind3.StationMessage, t *util.Table) {
 				}
 			}
 		}
-		s = strings.Trim(s, " ")
-		if s != "" {
-			v = append(v, s)
-		}
-	}
 
-	t.NewRow().
-		Append(strings.Join(v, "\n"))
+		appendMessageLine(t, s)
+	}
+}
+
+func appendMessageLine(t *util.Table, s string) {
+	s = strings.TrimSpace(s)
+	if s != "" {
+		t.NewRow().
+			Append(s)
+	}
 }
 
 func boardHeader(t1 *util.Table, stationName string) func(*util.Pagination, *util.ResultWriter) error {
@@ -375,4 +398,18 @@ func boardHeader(t1 *util.Table, stationName string) func(*util.Pagination, *uti
 		}
 		return nil
 	}
+}
+
+func doubleRow(t *util.Table, r *util.Row, o *util.ResultWriter) error {
+	err := o.WriteBytes(DoubleHeight)
+	if err == nil {
+		err = t.WriteRow(t, r, o)
+	}
+	if err == nil {
+		err = o.WriteBytes(DoubleHeight)
+	}
+	if err == nil {
+		err = t.WriteRow(t, r, o)
+	}
+	return err
 }

@@ -46,6 +46,7 @@ func (r *ShellRequest) NewTable() *util.Table {
 	// Default callbacks
 	t.Callback.PageHeader = func(p *util.Pagination, o *util.ResultWriter) error { return nil }
 	t.Callback.TableHeader = t.WriteHeader
+	t.Callback.TableRow = t.WriteRow
 
 	return t
 }

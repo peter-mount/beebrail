@@ -7,6 +7,7 @@ type Pagination struct {
 	pageHeight int // number of rows per page
 	pageWidth  int // page width
 	numRows    int // Number of rows
+	rowNum     int // Current row in page
 }
 
 type Page struct {
@@ -18,8 +19,9 @@ type Page struct {
 
 // PaginationCallback allows customisation of the output
 type PaginationCallback struct {
-	PageHeader  func(p *Pagination, o *ResultWriter) error // Write optional page header
-	TableHeader func(o *ResultWriter) error                // Write the TableHeader
+	PageHeader  func(p *Pagination, o *ResultWriter) error    // Write optional page header
+	TableHeader func(o *ResultWriter) error                   // Write the TableHeader
+	TableRow    func(t *Table, r *Row, o *ResultWriter) error // Write a table row
 }
 
 func (t *Table) NewPagination() *Pagination {
@@ -65,11 +67,20 @@ func (p *Pagination) AddPages(t *Table) *Pagination {
 }
 
 // IsPageBreak returns true if we should break the table for a specific rowNum
-func (p *Pagination) IsPageBreak(rowNum int) bool {
-	return rowNum == 0 || (p.pageHeight > 0 && (rowNum%p.pageHeight) == 0)
+func (p *Pagination) IsPageBreak() bool {
+	return p.rowNum == 0
 }
 
 func (p *Pagination) NextPage() bool {
 	p.pageNo++
+	p.rowNum = 0
 	return p.pageNo > 1
+}
+
+func (p *Pagination) NextRow() {
+	p.rowNum++
+}
+
+func (p *Pagination) Reset() {
+	p.rowNum = 0
 }
