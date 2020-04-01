@@ -233,21 +233,19 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 	}
 
 	var expected string
-	//expectedColour := uint8(AlphaGreen)
-	//expectedFlash := uint8(' ')
+	expectedColour := steadyGreen
 
 	forecast := l.Forecast.Departure
 
 	if l.Forecast.Arrived {
 		expected = "Arrived"
-		//expectedColour = AlphaWhite
+		expectedColour = steadyWhite
 	} else if l.Cancelled {
 		expected = "Canc'ld"
-		//expectedColour = AlphaRed
+		expectedColour = steadyRed
 	} else if forecast.Delayed {
 		expected = "Delayed"
-		//expectedColour = AlphaRed
-		//expectedFlash = Flash
+		expectedColour = steadyRed
 	} else if l.Delay == 0 {
 		expected = "On Time"
 	} else if forecast.ET != nil {
@@ -255,44 +253,40 @@ func processDeparture(crs string, sr *service.StationResult, s ldb.Service, t *u
 		expected = expected[0:2] + expected[3:5] + " "
 		// TODO if terminates here delay can show wrong as its using WTT not PTT in the calculation
 		//log.Println(forecast.Time(), l.Delay, forecast.ET, l.Times)
-		//if l.Delay > 0 {
-		//  expectedColour = AlphaYellow
-		//  expectedFlash = Flash
-		//}
+		if l.Delay > 0 {
+			expectedColour = flashYellow
+		}
 	}
 
 	t.NewRow().
-		Append(tm).
-		Append(dest).
-		Append(plat).
-		Append(expected)
-
-	/*
-		p := r.CurrentPage
-		for i := 0; i < 2; i++ {
-			if p.Y() >= 22 {
-				// If this means we go over the MAX_PAGES count then bail
-				if r.PageCount() >= MAX_PAGES {
-					return
-				}
-				p = r.AddPage()
-			}
-			y := p.Y() + 1
-
-			p.Tab(0, y).
-				AppendChars(DoubleHeight, AlphaYellow, ' ').
-				Append(tm).
-				AppendChar(AlphaWhite).
-				Append(dest).
-				Tab(24+5-len(plat), y).
-				AppendChar(AlphaYellow).
-				Append(plat).
-				Tab(37-len(expected), y).
-				AppendChars(expectedFlash, expectedColour).
-				Append(expected)
-		}
-	*/
+		Cell(&util.Cell{
+			Label:  tm,
+			Prefix: dblWhite,
+		}).
+		Cell(&util.Cell{
+			Label:  dest,
+			Prefix: white,
+		}).
+		Cell(&util.Cell{
+			Label:  plat,
+			Prefix: yellow,
+		}).
+		Cell(&util.Cell{
+			Label:  expected,
+			Prefix: expectedColour,
+		})
 }
+
+var (
+	dblWhite     = string([]byte{DoubleHeight, AlphaYellow})
+	white        = string([]byte{AlphaWhite})
+	yellow       = string([]byte{AlphaYellow})
+	steadyWhite  = string([]byte{' ', AlphaWhite})
+	steadyGreen  = string([]byte{' ', AlphaGreen})
+	steadyRed    = string([]byte{' ', AlphaRed})
+	steadyYellow = string([]byte{' ', AlphaYellow})
+	flashYellow  = string([]byte{Flash, AlphaYellow})
+)
 
 func processMessage(m *darwind3.StationMessage, t *util.Table) {
 	s := m.Message

@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
 	"io"
-	"log"
 	"strings"
 )
 
@@ -74,7 +73,7 @@ var MODE7 = TableStyle{
 	ShowTitle:  true,  // Show table title
 	HSep:       0,     // no separator
 	HLine:      0,     // no separator
-	CSep:       ' ',   // Space
+	CSep:       0,     // no column separator as we replace it
 	Border:     false, // no border
 	PageHeight: 19,    // Mode7 page height minus title & header
 	Mode7:      true,  // Flag as Mode7
@@ -174,7 +173,7 @@ func (t *TableStyle) VisitRow(o io.Writer, v func(o io.Writer) error) error {
 }
 
 func (t *TableStyle) VisitCell(o io.Writer, i int, v func(o io.Writer) error) error {
-	if i > 0 {
+	if i > 0 && t.CSep > 0 {
 		err := write(o, t.CSep)
 		if err != nil {
 			return err
@@ -325,7 +324,10 @@ func (t *Table) Write(out *ResultWriter) error {
 }
 
 func (t *Table) write(out *ResultWriter) error {
-	log.Println("write")
+
+	// Ugly but need this tables pageHeight here
+	t.pagination.pageHeight = t.Style.PageHeight
+
 	err := t.writeTable(out)
 	if err != nil {
 		return err
