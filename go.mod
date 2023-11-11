@@ -9,5 +9,5 @@ require (
 	github.com/peter-mount/nre-feeds v0.0.0-20200304152022-17e0600f7c86
 	github.com/peter-mount/sortfold v0.2.1
 	github.com/reiver/go-oi v1.0.0
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.4.0
 )
